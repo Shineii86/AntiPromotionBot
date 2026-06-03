@@ -19,7 +19,7 @@
 // VERSION — single source of truth
 // ══════════════════════════════════════════════════════════════
 
-let VERSION = '1.1.0-beta';
+let VERSION = '1.1.1-beta';
 
 // ---- FEATURE: package.json version reader ----
 // NOTE: Errors are silently caught — Workers and other

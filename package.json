@@ -1,6 +1,6 @@
 {
   "name": "antipromotionbot",
-  "version": "1.1.0-beta",
+  "version": "1.1.1-beta",
   "description": "A Telegram bot that keeps your groups clean by automatically removing promotional links and spam. Serverless, efficient, and always watching — deployed on Cloudflare Workers & Vercel.",
   "main": "api/index.js",
   "type": "module",
