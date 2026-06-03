@@ -15,11 +15,12 @@ All notable changes to Anti-Promotion Bot are documented here.
 - **Fixed bot-added `notAdminMessage` logic** — Now checks if the *bot itself* is an admin in the group, not the user who added it.
 - **Fixed apostrophe escaping in `/warn` and `/mute` usage messages** — Strings no longer break due to unescaped single quotes.
 
-### 🗑️ Removed Dead Code
+### 🗑️ Removed Dead Code / Unused Features
 
 - **Removed `RestrictedChats` parameter** — This was passed through botManager → onUpdate → botHandler but never checked anywhere. Removed from `onUpdate` signature, `botManager.js`, and `.env.example`.
 - **Removed unused exports** — `getAdCount()` (ads.js), `getUserViolations()` and `resetUserViolations()` (store.js), `versionInfo` (constants.js), `getChat()` and `getWebhookInfo()` (antiAPI.js).
 - **Removed `uniqueChats` Set** in favor of `Store.getAllChats()`.
+- **Removed multi-bot infrastructure** — Stripped `parseBotConfigs()`, `BotManager` class, `BOT_TOKENS` parsing, `/bot/:botId` routing, `handleBySecret()`. `botManager.js` is now a simple single-bot factory (~30 lines). Simplified `index.js` and `worker.js` entry points accordingly.
 
 ### ✨ Features Added
 

@@ -4,9 +4,8 @@
  * Repository: https://github.com/Shineii86/AntiPromotionBot
  *
  * @description
- *   Cloudflare Workers entry point. Handles single-bot and
- *   multi-bot webhook routing, health checks, and the
- *   landing page.
+ *   Cloudflare Workers entry point. Handles webhook POST,
+ *   health checks, and the landing page — single bot only.
  *
  * @exports default (Worker module)
  *
@@ -17,7 +16,7 @@
 
 import { htmlContent } from './landing.js';
 import { returnHTML, log } from './helper.js';
-import { BotManager } from './botManager.js';
+import { createBotConfig, handleUpdate } from './botManager.js';
 
 // ══════════════════════════════════════════════════════════════
 // CLOUDFLARE WORKERS FETCH HANDLER
@@ -26,7 +25,7 @@ import { BotManager } from './botManager.js';
 export default {
     /**
      * Main request handler for Cloudflare Workers.
-     * Routes: /bot/<botId> POST, / POST (legacy), /health GET, / GET (landing).
+     * Routes: / POST (webhook), /health GET, / GET (landing).
      *
      * @param {Request} request - Incoming HTTP request
      * @param {Object} env - Worker environment variables
@@ -35,47 +34,30 @@ export default {
     async fetch(request, env) {
         const url = new URL(request.url);
 
-        // NOTE: Reuse manager instance across invocations within the same worker.
-        // Re-create if env changes (e.g. during development).
-        if (!this._manager || this._managerEnv !== env) {
-            this._manager = new BotManager(env);
-            this._managerEnv = env;
-        }
-        const manager = this._manager;
-
         // ---- FEATURE: Health Endpoint ----
         if (url.pathname === '/health' && request.method === 'GET') {
+            const botConfig = createBotConfig(env);
             return new Response(JSON.stringify({
-                status: 'ok', timestamp: new Date().toISOString(), botCount: manager.count,
+                status: 'ok', timestamp: new Date().toISOString(), bot: botConfig?.username || 'none',
             }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // ---- FEATURE: Multi-bot Webhook POST ----
-        // Each bot registers: POST /bot/<botId>
-        if (url.pathname.startsWith('/bot/') && request.method === 'POST') {
-            const botId = url.pathname.split('/')[2];
-            const bot = manager.getBot(botId);
-            if (!bot) return new Response('Unknown bot', { status: 404 });
+        // ---- FEATURE: Webhook POST ----
+        if (request.method === 'POST') {
+            const botConfig = createBotConfig(env);
+            if (!botConfig) return new Response('BOT_TOKEN not configured', { status: 500 });
 
             const token = request.headers.get('x-telegram-bot-api-secret-token');
-            if (token !== bot.webhookSecret) return new Response('Forbidden', { status: 403 });
+            if (token !== botConfig.webhookSecret) {
+                return new Response('Forbidden', { status: 403 });
+            }
 
             const data = await request.json();
             try {
-                await manager.handleUpdate(botId, data);
+                await handleUpdate(botConfig, data);
             } catch (error) {
                 log.error('Webhook error:', error.message);
             }
-            return new Response('Ok', { status: 200 });
-        }
-
-        // ---- FEATURE: Single-bot Webhook (backward compatible) ----
-        // POST / — routes via webhook secret
-        if (request.method === 'POST') {
-            const token = request.headers.get('x-telegram-bot-api-secret-token');
-            const data = await request.json();
-            const handled = await manager.handleBySecret(token, data);
-            if (!handled) return new Response('Forbidden', { status: 403 });
             return new Response('Ok', { status: 200 });
         }
 

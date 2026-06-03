@@ -8,9 +8,6 @@
  *   development. Handles webhook routing, env validation,
  *   health checks, and the landing page.
  *
- *   Supports both single-bot (BOT_TOKEN) and multi-bot
- *   (BOT_TOKENS) modes with full backward compatibility.
- *
  * @exports app (Express instance, default export for Vercel)
  *
  * @author  Shinei Nouzen
@@ -23,7 +20,7 @@ import dotenv from 'dotenv';
 import { htmlContent } from './landing.js';
 import { log } from './helper.js';
 import { Store } from './store.js';
-import { BotManager } from './botManager.js';
+import { createBotConfig, handleUpdate } from './botManager.js';
 
 // ══════════════════════════════════════════════════════════════
 // ENVIRONMENT SETUP
@@ -35,13 +32,13 @@ if (!process.env.VERCEL) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// BOT MANAGER INITIALIZATION
+// BOT INITIALIZATION
 // ══════════════════════════════════════════════════════════════
 
-const manager = new BotManager(process.env);
+const botConfig = createBotConfig(process.env);
 
-if (manager.count === 0) {
-    log.error('No bots configured. Set BOT_TOKEN + BOT_USERNAME or BOT_TOKENS.');
+if (!botConfig) {
+    log.error('BOT_TOKEN not configured.');
     process.exit(1);
 }
 
@@ -56,74 +53,44 @@ app.use(express.json({ limit: '1mb' }));
 // WEBHOOK ROUTES
 // ══════════════════════════════════════════════════════════════
 
-// ---- FEATURE: Multi-bot Webhook Endpoint ----
-// Each bot registers: POST /bot/<botId>
-app.post('/bot/:botId', async (req, res) => {
-    const { botId } = req.params;
-    const bot = manager.getBot(botId);
-
-    if (!bot) return res.status(404).send('Unknown bot');
-
-    // Validate webhook secret
+// ---- FEATURE: Webhook Endpoint ----
+// POST / — validates secret, delegates to bot handler
+app.post('/', async (req, res) => {
     const token = req.headers['x-telegram-bot-api-secret-token'];
-    if (token !== bot.webhookSecret) {
-        log.warn(`Webhook secret mismatch for @${bot.username} — rejecting`);
+    if (token !== botConfig.webhookSecret) {
+        log.warn('Webhook secret mismatch — rejecting');
         return res.status(403).send('Forbidden');
     }
 
     try {
-        await manager.handleUpdate(botId, req.body);
+        await handleUpdate(botConfig, req.body);
         res.status(200).send('Ok');
     } catch (error) {
-        log.error(`Webhook error for @${bot.username}:`, error.message);
+        log.error('Webhook error:', error.message);
         res.status(200).send('Ok'); // Always return 200 to Telegram
     }
 });
 
-// ---- FEATURE: Single-bot Webhook (backward compatible) ----
-// POST / — routes via webhook secret (only works with single bot)
-app.post('/', async (req, res) => {
-    const token = req.headers['x-telegram-bot-api-secret-token'];
-    const handled = await manager.handleBySecret(token, req.body);
-
-    if (!handled) {
-        log.warn('Webhook secret mismatch on / — rejecting');
-        return res.status(403).send('Forbidden');
-    }
-
-    res.status(200).send('Ok');
-});
-
-// ---- FEATURE: Set Webhooks for All Bots ----
-// POST /set-webhooks  { "base_url": "https://your-domain.com" }
-// Registers webhook for every bot in one request: <base_url>/bot/<botId>
-app.post('/set-webhooks', async (req, res) => {
+// ---- FEATURE: Set Webhook ----
+// POST /set-webhook  { "base_url": "https://your-domain.com" }
+// Registers webhook for the bot
+app.post('/set-webhook', async (req, res) => {
     const { base_url } = req.body;
     if (!base_url) return res.status(400).json({ error: 'base_url is required' });
 
-    const cleanUrl = base_url.replace(/\/+$/, '');
-    const results = [];
-
-    for (const bot of manager.getAllBots()) {
-        const webhookUrl = `${cleanUrl}/bot/${bot.botId}`;
-        try {
-            const resp = await fetch(`https://api.telegram.org/bot${bot.token}/setWebhook`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: webhookUrl, secret_token: bot.webhookSecret }),
-            });
-            const data = await resp.json();
-            results.push({
-                bot: `@${bot.username}`, url: webhookUrl,
-                ok: data.ok, description: data.description,
-            });
-            log.info(`[Webhook] @${bot.username} → ${webhookUrl}`);
-        } catch (error) {
-            results.push({ bot: `@${bot.username}`, url: webhookUrl, ok: false, error: error.message });
-        }
+    const webhookUrl = `${base_url.replace(/\/+$/, '')}/`;
+    try {
+        const resp = await fetch(`https://api.telegram.org/bot${botConfig.token}/setWebhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: webhookUrl, secret_token: botConfig.webhookSecret }),
+        });
+        const data = await resp.json();
+        log.info(`[Webhook] @${botConfig.username} → ${webhookUrl}: ${data.description}`);
+        res.json({ ok: data.ok, description: data.description });
+    } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
     }
-
-    res.json({ ok: true, results });
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -137,16 +104,12 @@ app.get('/', (req, res) => {
 
 // ---- FEATURE: Health Endpoint ----
 app.get('/health', (req, res) => {
-    const bots = manager.getAllBots();
     res.status(200).json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        botCount: manager.count,
-        bots: bots.map(b => ({
-            username: b.username,
-            webhookSecured: !!b.webhookSecret,
-        })),
+        bot: botConfig.username,
+        webhookSecured: !!botConfig.webhookSecret,
     });
 });
 
@@ -205,10 +168,7 @@ if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         log.info(`Server running on port ${PORT}`);
-        log.info(`Bots: ${manager.count} configured`);
-        for (const bot of manager.getAllBots()) {
-            log.info(`  @${bot.username} → /bot/${bot.botId}`);
-        }
+        log.info(`Bot: @${botConfig.username}`);
     });
 }
 

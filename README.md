@@ -63,7 +63,6 @@ Anti-Promotion Bot is a Telegram bot that **automatically removes promotional li
 |---|---|---|
 | `BOT_TOKEN` | Telegram Bot API token from @BotFather | ✅ |
 | `BOT_USERNAME` | Bot username without @ | ✅ |
-| `BOT_TOKENS` | Multi-bot: token1:user1,token2:user2 (overrides BOT_TOKEN) | ❌ |
 | `OWNER_ID` | Telegram user ID for owner-only commands | ❌ |
 | `LOG_CHANNEL` | Channel/group ID for deletion reports | ❌ |
 | `WEBHOOK_SECRET` | Secret token for webhook validation | ❌ |
