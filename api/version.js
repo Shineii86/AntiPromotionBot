@@ -15,7 +15,15 @@
  * ======= • ======= • ======= • ======= • =======• =======
  */
 
+// ══════════════════════════════════════════════════════════════
+// VERSION — single source of truth
+// ══════════════════════════════════════════════════════════════
+
 let VERSION = '1.1.0-beta';
+
+// ---- FEATURE: package.json version reader ----
+// NOTE: Errors are silently caught — Workers and other
+// non-Node.js runtimes will use the fallback above.
 
 try {
     if (import.meta.url) {
@@ -28,3 +36,5 @@ try {
 }
 
 export { VERSION };
+
+// ══════════════════════════════════════════════════════════════ END: version.js

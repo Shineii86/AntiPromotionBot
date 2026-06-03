@@ -5,11 +5,21 @@
  *
  * @description
  *   Landing page HTML content for webhook root URL.
+ *   Provides a clean, visually appealing status page
+ *   when visiting the bot's base URL in a browser.
+ *
+ * @exports htmlContent
  *
  * @author  Shinei Nouzen
  * @license MIT
  * ======= • ======= • ======= • ======= • =======• =======
  */
+
+// ══════════════════════════════════════════════════════════════
+// LANDING PAGE HTML
+// ══════════════════════════════════════════════════════════════
+
+// ---- FEATURE: Landing Page ----
 
 export const htmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -78,7 +88,7 @@ export const htmlContent = `<!DOCTYPE html>
 </head>
 <body>
 <div class="container">
-  <div class="badge">v1.0.0</div>
+  <div class="badge">v1.1.0-beta</div>
   <h1>🛡️ <span>Anti-Promotion</span> Bot</h1>
   <p>A Telegram bot that keeps your groups clean by automatically removing promotional links and spam. Serverless, efficient, and always watching.</p>
   <div class="features">
@@ -106,3 +116,5 @@ export const htmlContent = `<!DOCTYPE html>
 </div>
 </body>
 </html>`;
+
+// ══════════════════════════════════════════════════════════════ END: landing.js

@@ -21,10 +21,16 @@
 
 import { log } from './helper.js';
 
+// ══════════════════════════════════════════════════════════════
+// ENVIRONMENT DETECTION
+// ══════════════════════════════════════════════════════════════
+
+// Detect Node.js vs Cloudflare Workers / other runtimes
 const isNode = typeof process !== 'undefined'
     && typeof process.versions === 'object'
     && !!process.versions.node;
 
+// Lazy-loaded Node.js fs module (avoids top-level import that breaks Workers bundler)
 let fs = null;
 let path = null;
 let DATA_DIR = null;
@@ -46,6 +52,7 @@ async function loadNodeModules() {
     }
 }
 
+// Redis detection (Upstash free tier)
 let isUpstash = false;
 const KV_KEY = 'antipromotionbot:state';
 
@@ -55,9 +62,13 @@ function detectRedis() {
         && !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 }
 
-let storageType = 'memory';
+let storageType = 'memory'; // 'upstash' | 'file' | 'memory'
 let redis = null;
 let loaded = false;
+
+// ══════════════════════════════════════════════════════════════
+// STATE — single source of truth
+// ══════════════════════════════════════════════════════════════
 
 let state = getDefaultState();
 
@@ -78,6 +89,10 @@ function getDefaultState() {
         perChatConfig: {},
     };
 }
+
+// ══════════════════════════════════════════════════════════════
+// FILE STORAGE (Local / Docker / Render — Node.js only)
+// ══════════════════════════════════════════════════════════════
 
 function fileLoad() {
     if (!fs || !STATE_FILE) return false;
@@ -119,6 +134,13 @@ function fileSave() {
     }
 }
 
+// ══════════════════════════════════════════════════════════════
+// UPSTASH REDIS STORAGE (Free tier — 10,000 req/day, 256MB)
+// Requires: npm install @upstash/redis
+// Env vars: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+// Get them free at: https://console.upstash.com
+// ══════════════════════════════════════════════════════════════
+
 async function upstashInit() {
     if (redis) return;
     try {
@@ -130,6 +152,7 @@ async function upstashInit() {
         log.info('[Store:Upstash] Redis client initialized');
     } catch (error) {
         log.error('[Store:Upstash] Failed to initialize:', error.message);
+        log.error('[Store:Upstash] Run: npm install @upstash/redis');
         storageType = 'memory';
     }
 }
@@ -170,10 +193,18 @@ async function upstashSave() {
     }
 }
 
-const SAVE_DEBOUNCE_MS = 5000;
+// ══════════════════════════════════════════════════════════════
+// UNIFIED SAVE — batched to reduce write frequency
+// ══════════════════════════════════════════════════════════════
+
+const SAVE_DEBOUNCE_MS = 5000; // Batch writes: max once per 5 seconds
 let dirty = false;
 let saveTimer = null;
 
+/**
+ * Schedule a save. Marks state as dirty and debounces writes.
+ * Actual write happens after SAVE_DEBOUNCE_MS of inactivity.
+ */
 function scheduleSave() {
     dirty = true;
     if (saveTimer) return;
@@ -186,6 +217,10 @@ function scheduleSave() {
     }, SAVE_DEBOUNCE_MS);
 }
 
+/**
+ * Immediate save — used on shutdown / critical moments.
+ * Flushes any pending debounced write.
+ */
 async function flush() {
     if (saveTimer) {
         clearTimeout(saveTimer);
@@ -197,25 +232,41 @@ async function flush() {
     log.info('[Store] Flushed to disk');
 }
 
+// ══════════════════════════════════════════════════════════════
+// LOAD (idempotent — only loads once)
+// ══════════════════════════════════════════════════════════════
+
 async function load() {
     if (loaded) return;
+
+    // Detect available storage backend
     detectRedis();
+
     if (isUpstash) {
+        // Upstash Redis (free tier — 10,000 req/day, 256MB)
         storageType = 'upstash';
         await upstashLoad();
     } else {
+        // Try file storage (Node.js only)
         const hasFS = await loadNodeModules();
         if (hasFS && fileLoad()) {
             storageType = 'file';
         } else {
+            // Cloudflare Workers / other runtimes: in-memory only
             storageType = 'memory';
             state = getDefaultState();
-            log.info('[Store] Using in-memory storage');
+            log.info('[Store] Using in-memory storage (no filesystem available)');
         }
     }
     loaded = true;
     log.info(`[Store] Storage backend: ${storageType}`);
 }
+
+// ══════════════════════════════════════════════════════════════
+// CHATS
+// ══════════════════════════════════════════════════════════════
+
+// ---- FEATURE: Chat Tracking ----
 
 async function updateChat(chatId, title, type) {
     const key = String(chatId);
@@ -254,6 +305,10 @@ function getAllChats() { return Object.values(state.chats); }
 function getChatCount() { return Object.keys(state.chats).length; }
 function hasChat(chatId) { return String(chatId) in state.chats; }
 
+// ══════════════════════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════════════════════
+
 function getStats() { return state.stats; }
 
 async function trackMessage() {
@@ -289,8 +344,15 @@ async function trackCommand(cmd) {
 
 function getCommandUsage() { return state.commandUsage; }
 
+// ══════════════════════════════════════════════════════════════
+// DELETION LOG
+// ══════════════════════════════════════════════════════════════
+
+// ---- FEATURE: Deletion Logging ----
+
 async function addDeletion(entry) {
     state.recentDeletions.push(entry);
+    // NOTE: Keep only the most recent 50 deletions to bound memory usage
     if (state.recentDeletions.length > 50) state.recentDeletions.shift();
     scheduleSave();
 }
@@ -298,6 +360,10 @@ async function addDeletion(entry) {
 function getRecentDeletions(limit = 20) {
     return state.recentDeletions.slice(-limit).reverse();
 }
+
+// ══════════════════════════════════════════════════════════════
+// PAUSED CHATS
+// ══════════════════════════════════════════════════════════════
 
 function isPaused(chatId) { return state.paused.includes(Number(chatId)); }
 function getPausedCount() { return state.paused.length; }
@@ -319,6 +385,12 @@ async function resumeChat(chatId) {
     }
 }
 
+// ══════════════════════════════════════════════════════════════
+// USER VIOLATIONS
+// ══════════════════════════════════════════════════════════════
+
+// ---- FEATURE: Repeat Offender Tracking ----
+
 function getUserViolations(chatId, userId) {
     const key = `${chatId}:${userId}`;
     return state.userViolations[key] || 0;
@@ -337,6 +409,12 @@ async function resetUserViolations(chatId, userId) {
     scheduleSave();
 }
 
+// ══════════════════════════════════════════════════════════════
+// PER-CHAT CONFIG
+// ══════════════════════════════════════════════════════════════
+
+// ---- FEATURE: Per-Group Configuration (whitelist/blacklist/keywords) ----
+
 function getPerChatConfig(chatId) {
     return state.perChatConfig[String(chatId)] || {};
 }
@@ -347,17 +425,28 @@ async function setPerChatConfig(chatId, config) {
     scheduleSave();
 }
 
+// ══════════════════════════════════════════════════════════════
+// UTILITY
+// ══════════════════════════════════════════════════════════════
+
 function getStorageType() { return storageType; }
 
+// ══════════════════════════════════════════════════════════════
+// EXPORTS
+// ══════════════════════════════════════════════════════════════
+
 export const Store = {
+    // Lifecycle
     load,
     flush,
     getStorageType,
+    // Chats
     updateChat,
     removeChat,
     getAllChats,
     getChatCount,
     hasChat,
+    // Stats
     getStats,
     trackMessage,
     trackPromotionStopped,
@@ -366,15 +455,21 @@ export const Store = {
     trackRepeatOffender,
     trackCommand,
     getCommandUsage,
+    // Deletion Log
     addDeletion,
     getRecentDeletions,
+    // Paused
     isPaused,
     getPausedCount,
     pauseChat,
     resumeChat,
+    // User Violations
     getUserViolations,
     incrementUserViolation,
     resetUserViolations,
+    // Per-Chat Config
     getPerChatConfig,
     setPerChatConfig,
 };
+
+// ══════════════════════════════════════════════════════════════ END: store.js
