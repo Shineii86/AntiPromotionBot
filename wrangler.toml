@@ -1,0 +1,11 @@
+name = "antipromotionbot"
+main = "api/worker.js"
+compatibility_date = "2025-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+BOT_USERNAME = "YourBotUsername"
+EMOJI_LIST = "🚫🛡️👀"
+
+[env.production]
+vars = { NODE_ENV = "production" }
