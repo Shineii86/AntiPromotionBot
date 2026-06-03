@@ -17,16 +17,58 @@ Anti-Promotion Bot is a Telegram bot that **automatically removes promotional li
 - **🚫 Link Detection** — Automatically detects and removes promotional links
 - **🔍 Spam Filter** — Identifies 30+ promotional keywords and spam patterns
 - **🛡️ Admin Safe** — Respects admin messages while keeping regular members in check
-- **⚡ Auto-Cleanup** — Warning messages auto-delete after 5 seconds
+- **⚡ Escalating Warnings** — 1-2=delete, 3-4=strong warn, 5+=auto mute 1hr
+- **📝 Per-Group Config** — Whitelist/blacklist domains, custom keywords per chat
+- **📊 Live Stats** — Messages, removals, warnings, uptime, command usage
+- **⏸️ Pause/Resume** — Temporarily disable monitoring in a group
+- **📢 Broadcast** — Owner-only: send message to all active groups
+- **🚨 Report Button** — Members can flag deleted messages to admin log channel
 - **☁️ Serverless** — Zero-maintenance deployment on Cloudflare Workers & Vercel
 
 ## 🎮 Commands
 
+### Everyone
 | Command | Description |
 |---|---|
 | `/start` | Welcome message with inline keyboard |
 | `/help` | Command reference and usage guide |
+| `/about` | Learn about the bot and developer |
+| `/donate` | Support the project |
 | `/status` | Check if bot is properly configured as admin |
+| `/stats` | Live statistics dashboard |
+
+### Group Admins Only
+| Command | Description |
+|---|---|
+| `/pause` | Pause monitoring in this chat |
+| `/resume` | Resume monitoring |
+| `/settings` | View per-group configuration |
+| `/whitelist` &lt;domain&gt; | Add trusted domain (bypasses link detection) |
+| `/blacklist` &lt;domain&gt; | Block specific domain |
+| `/keywords` &lt;word&gt; | Add custom promotional keywords |
+| `/warn` (reply) | Manually warn a user |
+| `/mute` (reply) | Mute a spammer for 1 hour |
+
+### Owner Only
+| Command | Description |
+|---|---|
+| `/broadcast` &lt;msg&gt; | Send message to all groups |
+| `/chats` | List all active chats with types |
+| `/log` | View last 20 deletion records |
+| `/leave` | Remove bot from the current group |
+
+## 🔐 Configuration
+
+| Variable | Description | Required |
+|---|---|---|
+| `BOT_TOKEN` | Telegram Bot API token from @BotFather | ✅ |
+| `BOT_USERNAME` | Bot username without @ | ✅ |
+| `BOT_TOKENS` | Multi-bot: token1:user1,token2:user2 (overrides BOT_TOKEN) | ❌ |
+| `OWNER_ID` | Telegram user ID for owner-only commands | ❌ |
+| `LOG_CHANNEL` | Channel/group ID for deletion reports | ❌ |
+| `WEBHOOK_SECRET` | Secret token for webhook validation | ❌ |
+| `BOT_PHOTO` | Photo URL for link previews in bot messages | ❌ |
+| `PORT` | Server port for Docker/VPS | ❌ |
 
 ## 🚀 Quick Deploy
 
@@ -46,18 +88,6 @@ npx wrangler deploy
 ```bash
 vercel --prod
 ```
-
-## 🔐 Configuration
-
-| Variable | Description | Required |
-|---|---|---|
-| `BOT_TOKEN` | Telegram Bot API token from @BotFather | ✅ |
-| `BOT_USERNAME` | Bot username without @ | ✅ |
-| `RESTRICTED_CHATS` | Chat IDs to exclude (comma separated) | ❌ |
-| `OWNER_ID` | Telegram user ID for owner-only commands | ❌ |
-| `WEBHOOK_SECRET` | Secret token for webhook validation | ❌ |
-| `BOT_PHOTO` | Photo URL for bot messages | ❌ |
-| `PORT` | Server port for Docker/VPS | ❌ |
 
 ## 🏗️ Project Structure
 

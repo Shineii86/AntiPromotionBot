@@ -11,7 +11,7 @@
  *   an HTML-formatted footer block.
  *
  * @exports
- *   getRandomAd, getAdFooter, getAdCount
+ *   getRandomAd, getAdFooter
  *
  * @customization
  *   Edit the `advertisements` array below to add, remove,
@@ -65,15 +65,6 @@ export function getRandomAd() {
 export function getAdFooter() {
     const ad = getRandomAd();
     return `\n\n📮 <b>Aᴅs:</b> <a href="https://t.me/QuinxAds">Quinx Ads</a>\n<blockquote>${ad}</blockquote>`;
-}
-
-/**
- * Returns the current number of ads in the pool.
- *
- * @returns {number} Ad count
- */
-export function getAdCount() {
-    return advertisements.length;
 }
 
 // ══════════════════════════════════════════════════════════════ END: ads.js

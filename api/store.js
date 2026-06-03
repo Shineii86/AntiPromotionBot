@@ -391,22 +391,11 @@ async function resumeChat(chatId) {
 
 // ---- FEATURE: Repeat Offender Tracking ----
 
-function getUserViolations(chatId, userId) {
-    const key = `${chatId}:${userId}`;
-    return state.userViolations[key] || 0;
-}
-
 async function incrementUserViolation(chatId, userId) {
     const key = `${chatId}:${userId}`;
     state.userViolations[key] = (state.userViolations[key] || 0) + 1;
     scheduleSave();
     return state.userViolations[key];
-}
-
-async function resetUserViolations(chatId, userId) {
-    const key = `${chatId}:${userId}`;
-    delete state.userViolations[key];
-    scheduleSave();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -464,9 +453,7 @@ export const Store = {
     pauseChat,
     resumeChat,
     // User Violations
-    getUserViolations,
     incrementUserViolation,
-    resetUserViolations,
     // Per-Chat Config
     getPerChatConfig,
     setPerChatConfig,

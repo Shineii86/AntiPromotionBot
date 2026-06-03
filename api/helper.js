@@ -57,13 +57,15 @@ export function containsLinks(text, whitelist = []) {
 
 /**
  * Detect promotional content via keyword matching.
- * Maches against a built-in list of 30+ common promo keywords.
+ * Matches against a built-in list of 30+ common promo keywords
+ * AND any custom keywords provided per-group.
  *
  * @param {string} text - Message text to scan
+ * @param {string[]} [customKeywords=[]] - Additional per-group keywords
  * @returns {boolean} true if promotional keywords are found
  */
-export function detectPromotion(text) {
-    const promoKeywords = [
+export function detectPromotion(text, customKeywords = []) {
+    const builtinKeywords = [
         'join', 'subscribe', 'follow', 'promotion', 'advertise', 'marketing',
         'discount', 'offer', 'sale', 'buy now', 'limited time', 'exclusive',
         'earn money', 'make money', 'free coins', 'click here', 'sign up',
@@ -71,8 +73,9 @@ export function detectPromotion(text) {
         'giveaway', 'contest', 'win', 'prize', 'lottery', 'casino',
         'investment', 'crypto', 'bitcoin', 'ethereum', 'referral', 'bonus',
     ];
+    const allKeywords = [...builtinKeywords, ...customKeywords.map(k => k.toLowerCase())];
     const lowerText = text.toLowerCase();
-    return promoKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
+    return allKeywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
 }
 
 // ══════════════════════════════════════════════════════════════

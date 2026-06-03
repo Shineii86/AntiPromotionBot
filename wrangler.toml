@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 BOT_USERNAME = "YourBotUsername"
-EMOJI_LIST = "🚫🛡️👀"
+BOT_TOKEN = ""
 
 [env.production]
 vars = { NODE_ENV = "production" }

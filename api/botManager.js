@@ -17,7 +17,7 @@
  */
 
 import TelegramBotAPI from './antiAPI.js';
-import { getChatIds, log } from './helper.js';
+import { log } from './helper.js';
 import { onUpdate } from './botHandler.js';
 
 // ══════════════════════════════════════════════════════════════
@@ -89,9 +89,7 @@ export class BotManager {
                 username: cfg.username,
                 botId: cfg.botId,
                 api: new TelegramBotAPI(cfg.token),
-                restrictedChats: getChatIds(env.RESTRICTED_CHATS),
                 ownerId: env.OWNER_ID || '',
-                // NOTE: Fall back to runtime UUID if no WEBHOOK_SECRET set
                 webhookSecret: env.WEBHOOK_SECRET || (globalThis.crypto?.randomUUID?.() || 'auto-secret-' + Date.now()),
                 botPhoto: env.BOT_PHOTO || '',
                 logChannel: env.LOG_CHANNEL || '',
@@ -157,7 +155,7 @@ export class BotManager {
         if (!bot) throw new Error(`Unknown bot: ${botId}`);
 
         await onUpdate(
-            data, bot.api, bot.restrictedChats,
+            data, bot.api,
             bot.username, bot.ownerId,
             bot.webhookSecret, bot.botPhoto,
             bot.logChannel

@@ -25,7 +25,7 @@ import {
     broadcastStarted, broadcastDone, logEmptyMessage,
     mutedMessage, warnedMessage, repeatOffenderMessage,
     whitelistUpdatedMessage, blacklistUpdatedMessage, keywordsUpdatedMessage,
-    betaNotice, versionInfo
+    betaNotice,
 } from './constants.js';
 import { containsLinks, detectPromotion, log } from './helper.js';
 import { getAdFooter } from './ads.js';
@@ -36,21 +36,17 @@ import { Store } from './store.js';
 // ══════════════════════════════════════════════════════════════
 
 // ---- FEATURE: Rate Limiting ----
-const RATE_LIMIT_MAX = 10;         // Max actions per window per chat
-const RATE_LIMIT_WINDOW = 10000;   // Window duration in ms (10 sec)
-const AUTO_DELETE_MS = 5000;       // Auto-delete bot messages after 5s
-const LOG_MAX = 50;                // Max deletion log entries kept in memory
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW = 10000;
+const AUTO_DELETE_MS = 5000;
 
 const startTime = Date.now();
-const uniqueChats = new Set();
-const rateLimitMap = {};            // chatId -> { count, resetAt }
-const lastBotMessage = {};         // chatId -> message_id (to clean up previous bot msg)
+const rateLimitMap = {};
+const lastBotMessage = {};
 
 // ══════════════════════════════════════════════════════════════
 // UTILITY FUNCTIONS
 // ══════════════════════════════════════════════════════════════
-
-// ---- FEATURE: Uptime Formatter ----
 
 /**
  * Format milliseconds into a human-readable uptime string.
@@ -69,11 +65,8 @@ function formatUptime(ms) {
     return `${s}s`;
 }
 
-// ---- FEATURE: IST Timestamp Formatter ----
-
 /**
  * Format a Date or timestamp to IST (UTC+5:30) human-readable string.
- * Used in deletion logs and stats.
  *
  * @param {Date|number} date - Date object or timestamp
  * @returns {string} e.g. "03 Jᴜɴ 2026, 2:30:00 Pᴍ Isᴛ"
@@ -144,12 +137,9 @@ async function isGroupAdmin(botApi, chatId, userId) {
 // RATE LIMITING
 // ══════════════════════════════════════════════════════════════
 
-// ---- FEATURE: Per-Chat Rate Limiter ----
-
 /**
  * Enforce per-chat rate limit.
  * Allows up to RATE_LIMIT_MAX actions per RATE_LIMIT_WINDOW ms.
- * Resets automatically when the window expires.
  *
  * @param {number} chatId
  * @returns {boolean} true if action is allowed
@@ -170,15 +160,12 @@ function checkRateLimit(chatId) {
 // MESSAGE CLEANUP
 // ══════════════════════════════════════════════════════════════
 
-// ---- FEATURE: Auto-cleanup of bot messages ----
-
 /**
  * Delete the previous bot message in a chat, then the user's command message.
- * Tracks last bot message per chat to avoid flooding.
  *
- * @param {Object} botApi - TelegramBotAPI instance
+ * @param {Object} botApi
  * @param {number} chatId
- * @param {number} userMessageId - The user's command message to delete
+ * @param {number} userMessageId
  */
 async function cleanupMessages(botApi, chatId, userMessageId) {
     if (lastBotMessage[chatId]) {
@@ -203,8 +190,6 @@ function trackBotMessage(chatId, sent) {
 // KEYBOARD BUILDERS
 // ══════════════════════════════════════════════════════════════
 
-// ---- FEATURE: Inline Keyboards ----
-
 /**
  * Build the main menu keyboard for the /start screen.
  *
@@ -221,7 +206,7 @@ function getStartKeyboard(botUsername) {
 }
 
 /**
- * Build the back-navigation keyboard (used from help/about/donate).
+ * Build the back-navigation keyboard.
  *
  * @returns {Array} Telegram inline keyboard markup
  */
@@ -246,17 +231,15 @@ function getCloseKeyboard() {
 // STATS MESSAGE BUILDER
 // ══════════════════════════════════════════════════════════════
 
-// ---- FEATURE: /stats Message ----
-
 /**
  * Build the stats display message.
  * Includes live counters, command usage, and recent deletions.
  *
  * @param {string} botUsername
- * @param {string} logChannel - Log channel ID (for display only)
+ * @param {string} logChannel
  * @returns {string} HTML-formatted stats message
  */
-function getStatsMessage(botUsername, logChannel) {
+function getStatsMessage() {
     const storeStats = Store.getStats();
     const uptime = formatUptime(Date.now() - startTime);
     const cmdLines = Object.entries(Store.getCommandUsage())
@@ -277,7 +260,7 @@ function getStatsMessage(botUsername, logChannel) {
 🔍 <b>Pʀᴏᴍᴏᴛɪᴏɴs Sᴛᴏᴘᴘᴇᴅ:</b> ${storeStats.promotionsStopped.toLocaleString()}
 ⚠️ <b>Wᴀʀɴɪɴɢs Sᴇɴᴛ:</b> ${storeStats.warningsSent.toLocaleString()}
 🔄 <b>Rᴇᴘᴇᴀᴛ Oғғᴇɴᴅᴇʀs:</b> ${storeStats.repeatOffenders.toLocaleString()}
-💬 <b>Uɴɪǫᴜᴇ Cʜᴀᴛs:</b> ${uniqueChats.size.toLocaleString()}
+💬 <b>Cʜᴀᴛs:</b> ${Store.getChatCount().toLocaleString()}
 ⏸️ <b>Pᴀᴜsᴇᴅ Cʜᴀᴛs:</b> ${Store.getPausedCount().toLocaleString()}
 ⏱️ <b>Uᴘᴛɪᴍᴇ:</b> ${uptime}
 🕐 <b>Sᴛᴀʀᴛᴇᴅ:</b> ${formatIST(startTime)}
@@ -289,11 +272,21 @@ ${cmdLines}${recentText}
 ${betaNotice}`)}`;
 }
 
+/**
+ * Validate that a string is a reasonable domain name.
+ *
+ * @param {string} str - Input to validate
+ * @returns {boolean}
+ */
+function isValidDomain(str) {
+    if (!str || str.length < 2 || str.length > 253) return false;
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+    return domainRegex.test(str);
+}
+
 // ══════════════════════════════════════════════════════════════
 // MAIN UPDATE HANDLER
 // ══════════════════════════════════════════════════════════════
-
-// ---- FEATURE: Telegram Update Dispatcher ----
 
 /**
  * Process an incoming Telegram update.
@@ -301,14 +294,13 @@ ${betaNotice}`)}`;
  *
  * @param {Object} data - Telegram update object
  * @param {Object} botApi - TelegramBotAPI instance
- * @param {number[]} RestrictedChats - Array of restricted chat IDs (unused, kept for signature compat)
  * @param {string} botUsername
  * @param {string} ownerId
  * @param {string} webhookSecret
  * @param {string} botPhoto
  * @param {string} logChannel
  */
-export async function onUpdate(data, botApi, RestrictedChats, botUsername, ownerId, webhookSecret, botPhoto, logChannel) {
+export async function onUpdate(data, botApi, botUsername, ownerId, webhookSecret, botPhoto, logChannel) {
 
     await Store.load();
 
@@ -331,32 +323,25 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
 
         try {
             switch (cq.data) {
-                // ---- FEATURE: /help callback ----
                 case 'cb_help':
                     await editMsg(withAd(helpMessage), getBackKeyboard());
                     break;
-                // ---- FEATURE: Main menu callback ----
                 case 'cb_menu':
                     await editMsg(withAd(startMessage), getStartKeyboard(botUsername));
                     break;
-                // ---- FEATURE: /stats callback ----
                 case 'cb_stats':
-                    await editMsg(getStatsMessage(botUsername, logChannel), getBackKeyboard());
+                    await editMsg(getStatsMessage(), getBackKeyboard());
                     break;
-                // ---- FEATURE: /about callback ----
                 case 'cb_about':
                     await editMsg(withAd(aboutMessage), getBackKeyboard());
                     break;
-                // ---- FEATURE: /donate callback ----
                 case 'cb_donate':
                     await editMsg(withAd(donateMessage), getBackKeyboard());
                     break;
-                // ---- FEATURE: Close button ----
                 case 'cb_close':
                     await botApi.deleteMessage(chatId, messageId);
                     break;
                 default:
-                    // ---- FEATURE: Report button ----
                     if (cq.data.startsWith('cb_report:')) {
                         const parts = cq.data.split(':');
                         const reportedChatId = parts[1];
@@ -393,10 +378,8 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
         const userId = msg.from?.id;
         const chatTitle = msg.chat.title || msg.chat.first_name || String(chatId);
 
-        // Track chat activity
         await Store.updateChat(chatId, chatTitle, chatType);
         await Store.trackMessage();
-        uniqueChats.add(chatId);
 
         const linkPreview = botPhoto ? {
             url: botPhoto, prefer_large_media: true, show_above_text: true
@@ -408,9 +391,13 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
                 member => member.username?.toLowerCase() === botUsername.toLowerCase()
             );
             if (isBotAdded) {
+                // NOTE: Check if the bot itself is admin, not the adder
+                const botMe = await botApi.getMe();
+                const botId = botMe?.result?.id;
                 let welcome = botAddedMessage;
-                const isAdmin = await isGroupAdmin(botApi, chatId, userId);
-                if (!isAdmin) welcome += '\n\n' + notAdminMessage;
+                if (botId && !(await isGroupAdmin(botApi, chatId, botId))) {
+                    welcome += '\n\n' + notAdminMessage;
+                }
                 const sent = await botApi.sendMessage(chatId, welcome, getCloseKeyboard());
                 trackBotMessage(chatId, sent);
                 return;
@@ -443,17 +430,13 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
             }
             if (!text) return;
 
-            // Skip admins — they can send whatever they want
             const isAdmin = await isGroupAdmin(botApi, chatId, userId);
             if (isAdmin) return;
 
-            // Skip if paused
             if (Store.isPaused(chatId)) return;
 
-            // Enforce rate limit
             if (!checkRateLimit(chatId)) return;
 
-            // Load per-group config
             const config = Store.getPerChatConfig(chatId);
             const whitelist = config.whitelist || [];
             const blacklist = config.blacklist || [];
@@ -467,7 +450,6 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
             if (hasLink || isPromo || hasBlacklisted) {
                 await botApi.deleteMessage(chatId, messageId);
 
-                // Track violations and deletions
                 const violationCount = await Store.incrementUserViolation(chatId, userId);
                 const userDisplay = msg.from?.username || String(msg.from?.id || 'User');
 
@@ -484,9 +466,6 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
                 if (isPromo || hasBlacklisted) await Store.trackPromotionStopped();
 
                 // ---- FEATURE: Escalating Warnings ----
-                // 1-2 violations: simple delete notice
-                // 3-4 violations: strong warning
-                // 5+ violations: auto-mute for 1 hour
                 let delMsg;
                 let keyboard = null;
                 let deleteAfter = AUTO_DELETE_MS;
@@ -510,7 +489,6 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
                 } else if (hasBlacklisted) {
                     delMsg = linkDeletedMessage(userDisplay);
                 } else if (hasLink) {
-                    // ---- FEATURE: Report Button ----
                     delMsg = linkDeletedMessage(userDisplay);
                     keyboard = [[{ text: '🚨 Rᴇᴘᴏʀᴛ', callback_data: `cb_report:${chatId}:${userId}:${messageId}` }]];
                 } else {
@@ -545,10 +523,10 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
  * @param {string} text - Full message text
  * @param {number} chatId
  * @param {Object} msg - Telegram message object
- * @param {Object} botApi - TelegramBotAPI instance
+ * @param {Object} botApi
  * @param {string} botUsername
  * @param {string} ownerId
- * @param {Object|null} linkPreview - Link preview config
+ * @param {Object|null} linkPreview
  * @param {string} logChannel
  */
 async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview, logChannel) {
@@ -607,7 +585,7 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
         // ---- FEATURE: /stats ----
         case '/stats':
             await cleanupMessages(botApi, chatId, msg.message_id);
-            const statsSent = await botApi.sendMessage(chatId, getStatsMessage(botUsername, logChannel), getCloseKeyboard(), linkPreview);
+            const statsSent = await botApi.sendMessage(chatId, getStatsMessage(), getCloseKeyboard(), linkPreview);
             trackBotMessage(chatId, statsSent);
             break;
 
@@ -686,9 +664,13 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
                 trackBotMessage(chatId, s); return;
             }
             {
+                const domain = args.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+                if (!isValidDomain(domain)) {
+                    const s = await botApi.sendMessage(chatId, '📵 Iɴᴠᴀʟɪᴅ Dᴏᴍᴀɪɴ. Usᴇ Fᴏʀᴍᴀᴛ: <code>example.com</code>', getCloseKeyboard());
+                    trackBotMessage(chatId, s); return;
+                }
                 const cfg = Store.getPerChatConfig(chatId);
                 const list = cfg.whitelist || [];
-                const domain = args.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
                 if (!list.includes(domain)) list.push(domain);
                 await Store.setPerChatConfig(chatId, { whitelist: list });
                 const s = await botApi.sendMessage(chatId, withAd(`${whitelistUpdatedMessage}\n➕ <code>${domain}</code>`), getCloseKeyboard(), linkPreview);
@@ -712,9 +694,13 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
                 trackBotMessage(chatId, s); return;
             }
             {
+                const domain = args.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+                if (!isValidDomain(domain)) {
+                    const s = await botApi.sendMessage(chatId, '📵 Iɴᴠᴀʟɪᴅ Dᴏᴍᴀɪɴ. Usᴇ Fᴏʀᴍᴀᴛ: <code>example.com</code>', getCloseKeyboard());
+                    trackBotMessage(chatId, s); return;
+                }
                 const cfg = Store.getPerChatConfig(chatId);
                 const list = cfg.blacklist || [];
-                const domain = args.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
                 if (!list.includes(domain)) list.push(domain);
                 await Store.setPerChatConfig(chatId, { blacklist: list });
                 const s = await botApi.sendMessage(chatId, withAd(`${blacklistUpdatedMessage}\n🚫 <code>${domain}</code>`), getCloseKeyboard(), linkPreview);
@@ -759,26 +745,17 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
                 trackBotMessage(chatId, s); return;
             }
             await cleanupMessages(botApi, chatId, msg.message_id);
-            if (!args) {
-                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/warn @username</code>', getCloseKeyboard());
+            if (!msg.reply_to_message) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: Rᴇᴘʟʏ Tᴏ A Usᴇʀ\'s Mᴇssᴀɢᴇ Wɪᴛʜ <code>/warn</code>', getCloseKeyboard());
                 trackBotMessage(chatId, s); return;
             }
             {
-                const targetName = args.replace('@', '');
-                let targetId = null;
-                // NOTE: Support both reply-to and @username syntax
-                if (msg.reply_to_message?.from) {
-                    targetId = msg.reply_to_message.from.id;
-                }
-                if (targetId) {
-                    const count = await Store.incrementUserViolation(chatId, targetId);
-                    await Store.trackWarning();
-                    const s = await botApi.sendMessage(chatId, withAd(warnedMessage(targetName, count)), getCloseKeyboard(), linkPreview);
-                    trackBotMessage(chatId, s);
-                } else {
-                    const s = await botApi.sendMessage(chatId, '📵 Cᴏᴜʟᴅ Nᴏᴛ Iᴅᴇɴᴛɪғʏ Usᴇʀ. Rᴇᴘʟʏ Tᴏ Tʜᴇɪʀ Mᴇssᴀɢᴇ Oʀ Usᴇ /warn Iɴ Tʜᴇɪʀ Cʜᴀᴛ.', getCloseKeyboard());
-                    trackBotMessage(chatId, s);
-                }
+                const targetId = msg.reply_to_message.from.id;
+                const targetName = msg.reply_to_message.from.username || String(targetId);
+                const count = await Store.incrementUserViolation(chatId, targetId);
+                await Store.trackWarning();
+                const s = await botApi.sendMessage(chatId, withAd(warnedMessage(targetName, count)), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
             }
             break;
 
@@ -793,29 +770,24 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
                 trackBotMessage(chatId, s); return;
             }
             await cleanupMessages(botApi, chatId, msg.message_id);
-            if (!args && !msg.reply_to_message) {
-                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/mute @username</code> Oʀ Rᴇᴘʟʏ Tᴏ A Mᴇssᴀɢᴇ.', getCloseKeyboard());
+            if (!msg.reply_to_message) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: Rᴇᴘʟʏ Tᴏ A Usᴇʀ\'s Mᴇssᴀɢᴇ Wɪᴛʜ <code>/mute</code>', getCloseKeyboard());
                 trackBotMessage(chatId, s); return;
             }
             {
-                const muteUserId = msg.reply_to_message?.from?.id || args;
-                if (muteUserId && typeof muteUserId === 'number') {
-                    try {
-                        await botApi.callApi('restrictChatMember', {
-                            chat_id: chatId,
-                            user_id: muteUserId,
-                            permissions: { can_send_messages: false },
-                            until_date: Math.floor(Date.now() / 1000) + 3600,
-                        });
-                        const name = msg.reply_to_message?.from?.username || 'Usᴇʀ';
-                        const s = await botApi.sendMessage(chatId, withAd(mutedMessage(name)), getCloseKeyboard(), linkPreview);
-                        trackBotMessage(chatId, s);
-                    } catch (e) {
-                        const s = await botApi.sendMessage(chatId, `📵 Fᴀɪʟᴇᴅ Tᴏ Mᴜᴛᴇ: ${e.message}`, getCloseKeyboard());
-                        trackBotMessage(chatId, s);
-                    }
-                } else {
-                    const s = await botApi.sendMessage(chatId, '📵 Cᴏᴜʟᴅ Nᴏᴛ Iᴅᴇɴᴛɪғʏ Usᴇʀ.', getCloseKeyboard());
+                const muteUserId = msg.reply_to_message.from.id;
+                const name = msg.reply_to_message.from.username || 'Usᴇʀ';
+                try {
+                    await botApi.callApi('restrictChatMember', {
+                        chat_id: chatId,
+                        user_id: muteUserId,
+                        permissions: { can_send_messages: false },
+                        until_date: Math.floor(Date.now() / 1000) + 3600,
+                    });
+                    const s = await botApi.sendMessage(chatId, withAd(mutedMessage(name)), getCloseKeyboard(), linkPreview);
+                    trackBotMessage(chatId, s);
+                } catch (e) {
+                    const s = await botApi.sendMessage(chatId, `📵 Fᴀɪʟᴇᴅ Tᴏ Mᴜᴛᴇ: ${e.message}`, getCloseKeyboard());
                     trackBotMessage(chatId, s);
                 }
             }
@@ -836,11 +808,12 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
             {
                 let bSent = await botApi.sendMessage(chatId, broadcastStarted, getCloseKeyboard());
                 trackBotMessage(chatId, bSent);
-                const allChats = [...uniqueChats];
+                // NOTE: Only broadcast to groups/supergroups, not private chats
+                const allChats = Store.getAllChats().filter(c => isGroupChat(c.type));
                 let success = 0, failed = 0;
-                for (const cid of allChats) {
+                for (const c of allChats) {
                     try {
-                        await botApi.sendMessage(cid, `📢 <b>Bʀᴏᴀᴅᴄᴀsᴛ</b>\n\n${args}`);
+                        await botApi.sendMessage(c.id, `📢 <b>Bʀᴏᴀᴅᴄᴀsᴛ</b>\n\n${args}`);
                         success++;
                     } catch { failed++; }
                 }
@@ -893,6 +866,24 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
                 const privates = allChats.filter(c => c.type === 'private').length;
                 const s = await botApi.sendMessage(chatId, withAd(`💬 <b>Aʟʟ Cʜᴀᴛs (${allChats.length}):</b>\n\n${chatLines}\n\n📊 ${groups} ɢʀᴏᴜᴘs · ${channels} ᴄʜᴀɴɴᴇʟs · ${privates} ᴘʀɪᴠᴀᴛᴇ`), getCloseKeyboard(), linkPreview);
                 trackBotMessage(chatId, s);
+            }
+            break;
+
+        // ---- FEATURE: /leave ----
+        case '/leave':
+            if (!isOwner(userId, ownerId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyOwnerMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, '🏘️ Tʜɪs Cᴏᴍᴍᴀɴᴅ Oɴʟʏ Wᴏʀᴋs Iɴ Gʀᴏᴜᴘs.', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            {
+                const s = await botApi.sendMessage(chatId, '👋 Lᴇᴀᴠɪɴɢ… Pᴇʀ Aᴅᴍɪɴ Oʀᴅᴇʀ.', getCloseKeyboard());
+                trackBotMessage(chatId, s);
+                await Store.removeChat(chatId);
+                try { await botApi.leaveChat(chatId); } catch {}
             }
             break;
 

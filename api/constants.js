@@ -17,7 +17,7 @@
  *   broadcastStarted, broadcastDone, logEmptyMessage,
  *   mutedMessage, warnedMessage,
  *   whitelistUpdatedMessage, blacklistUpdatedMessage,
- *   keywordsUpdatedMessage, betaNotice, versionInfo
+ *   keywordsUpdatedMessage, betaNotice
  *
  * @author  Shinei Nouzen
  * @license MIT
@@ -234,8 +234,5 @@ export const betaNotice = `⚠️ <b>Bᴇᴛᴀ Vᴇʀsɪᴏɴ</b>
 Tʜɪs Bᴏᴛ Is Iɴ Bᴇᴛᴀ. Yᴏᴜ Mᴀʏ Fɪɴᴅ Bᴜɢs, Eʀʀᴏʀs, Oʀ Uɴᴇxᴘᴇᴄᴛᴇᴅ Bᴇʜᴀᴠɪᴏʀ. Pʟᴇᴀsᴇ Rᴇᴘᴏʀᴛ Tʜᴇᴍ Tᴏ @Shineii86 Sᴏ Tʜᴇʏ Cᴀɴ Bᴇ Fɪxᴇᴅ.
 
 Sᴜɢɢᴇsᴛɪᴏɴs Aɴᴅ Fᴇᴇᴅʙᴀᴄᴋ Aʀᴇ Aʟᴡᴀʏs Wᴇʟᴄᴏᴍᴇ.`
-
-// ---- FEATURE: Version info ----
-export const versionInfo = `🚀 <b>Vᴇʀsɪᴏɴ:</b> v${VERSION}`
 
 // ══════════════════════════════════════════════════════════════ END: constants.js

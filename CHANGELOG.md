@@ -4,6 +4,38 @@ All notable changes to Anti-Promotion Bot are documented here.
 
 ---
 
+## [v1.1.1-beta] — 2026-06-03
+
+### 🐛 Bug Fixes
+
+- **Fixed `detectPromotion()` ignoring custom keywords** — The function now accepts a `customKeywords` parameter and merges it with the built-in keyword list before checking. Per-group custom keywords now actually work.
+- **Fixed `/mute` broken user ID resolution** — Switched to reply-only mode. The old code tried to use a string `@username` as a numeric user ID, which always failed.
+- **Fixed `broadcast` hitting private chats** — Now only sends to groups/supergroups, not private DMs.
+- **Fixed `broadcast` using volatile `uniqueChats` Set** — Now reads from `Store.getAllChats()`, which persists across restarts.
+- **Fixed bot-added `notAdminMessage` logic** — Now checks if the *bot itself* is an admin in the group, not the user who added it.
+- **Fixed apostrophe escaping in `/warn` and `/mute` usage messages** — Strings no longer break due to unescaped single quotes.
+
+### 🗑️ Removed Dead Code
+
+- **Removed `RestrictedChats` parameter** — This was passed through botManager → onUpdate → botHandler but never checked anywhere. Removed from `onUpdate` signature, `botManager.js`, and `.env.example`.
+- **Removed unused exports** — `getAdCount()` (ads.js), `getUserViolations()` and `resetUserViolations()` (store.js), `versionInfo` (constants.js), `getChat()` and `getWebhookInfo()` (antiAPI.js).
+- **Removed `uniqueChats` Set** in favor of `Store.getAllChats()`.
+
+### ✨ Features Added
+
+- **`/leave` command** — Owner can now remotely remove the bot from a group with `/leave`.
+- **Domain validation** for `/whitelist` and `/blacklist` — Invalid domain formats are rejected with a usage message.
+
+### 🔧 Improvements
+
+- **`/warn` now requires reply** — Removed the broken @username syntax; only reply-to works, which provides a reliable user ID.
+- **AntiAPI `setWebhook` now accepts `allowedUpdates`** — Configurable instead of hardcoded.
+- **Updated `wrangler.toml`** — Removed unused `EMOJI_LIST` variable.
+- **Updated `README.md`** — Full command table for all roles, updated env var docs.
+- **Section header comments added to `antiAPI.js`** — Matches Alisa-style codebase convention.
+
+---
+
 ## [v1.1.0-beta] — 2026-06-03
 
 ### ⚠️ Beta Release
