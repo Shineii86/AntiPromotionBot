@@ -562,7 +562,7 @@ export const htmlContent = `<!DOCTYPE html>
   <div class="island-wrap">
     <div class="island">
       <a href="/" class="island-brand">
-        <div class="island-logo">🛡️</div>
+        <div class="island-logo"><i data-lucide="shield"></i></div>
         <span class="island-title">Anti-Promotion</span>
       </a>
       <div class="island-divider"></div>
@@ -604,14 +604,14 @@ export const htmlContent = `<!DOCTYPE html>
               <span class="terminal-title">monitoring — AntiPromotionBot</span>
             </div>
             <div class="terminal-body">
-              <div class="terminal-line"><span class="terminal-prompt">$</span><span class="terminal-cmd"> detectPromotion("Free crypto here! 🚀")</span></div>
+              <div class="terminal-line"><span class="terminal-prompt">$</span><span class="terminal-cmd"> detectPromotion("Free crypto here!")</span></div>
               <div class="terminal-line"><span class="terminal-err">>> MATCH: keyword[crypto] + URL detected</span></div>
-              <div class="terminal-line"><span class="terminal-ok">>> 🚫 Message deleted silently</span></div>
+              <div class="terminal-line"><span class="terminal-ok">>> <i data-lucide="ban" style="width:12px;height:12px;display:inline;vertical-align:middle"></i> Message deleted silently</span></div>
               <div class="terminal-line"><span class="terminal-prompt">$</span><span class="terminal-cmd"> detectPromotion("Check out my Telegram channel")</span></div>
               <div class="terminal-line"><span class="terminal-err">>> MATCH: invite_link detected</span></div>
-              <div class="terminal-line"><span class="terminal-ok">>> 🚫 Message deleted + user warned (tier 1)</span></div>
+              <div class="terminal-line"><span class="terminal-ok">>> <i data-lucide="ban" style="width:12px;height:12px;display:inline;vertical-align:middle"></i> Message deleted + user warned (tier 1)</span></div>
               <div class="terminal-line"><span class="terminal-prompt">$</span><span class="terminal-cmd"> detectPromotion("legit question about the project")</span></div>
-              <div class="terminal-line"><span class="terminal-ok">>> ✅ Clean — message allowed</span></div>
+              <div class="terminal-line"><span class="terminal-ok">>> <i data-lucide="check-circle" style="width:12px;height:12px;display:inline;vertical-align:middle"></i> Clean — message allowed</span></div>
               <div class="terminal-line" style="margin-top:8px"><span class="terminal-prompt">$</span><span class="terminal-cursor"> <span class="cursor-blink"></span></span></div>
             </div>
           </div>
@@ -700,7 +700,7 @@ export const htmlContent = `<!DOCTYPE html>
 
         <div class="cmd-section" style="text-align:left;max-width:700px;margin:0 auto;">
           <div class="cmd-group">
-            <h4><span style="color:var(--text-muted)">👤</span> Everyone</h4>
+            <h4><span style="color:var(--text-muted)"><i data-lucide="user" style="width:16px;height:16px"></i></span> Everyone</h4>
             <table class="cmd-table">
               <tr><th>Command</th><th>Description</th></tr>
               <tr><td>/start</td><td>Welcome message with inline keyboard</td></tr>
@@ -713,7 +713,7 @@ export const htmlContent = `<!DOCTYPE html>
           </div>
 
           <div class="cmd-group">
-            <h4><span style="color:var(--text-muted)">👑</span> Group Admins</h4>
+            <h4><span style="color:var(--text-muted)"><i data-lucide="crown" style="width:16px;height:16px"></i></span> Group Admins</h4>
             <table class="cmd-table">
               <tr><th>Command</th><th>Description</th></tr>
               <tr><td>/pause</td><td>Pause monitoring in this chat</td></tr>
@@ -728,7 +728,7 @@ export const htmlContent = `<!DOCTYPE html>
           </div>
 
           <div class="cmd-group">
-            <h4><span style="color:var(--text-muted)">🔒</span> Owner Only</h4>
+            <h4><span style="color:var(--text-muted)"><i data-lucide="lock" style="width:16px;height:16px"></i></span> Owner Only</h4>
             <table class="cmd-table">
               <tr><th>Command</th><th>Description</th></tr>
               <tr><td>/broadcast</td><td>Send message to all groups</td></tr>
