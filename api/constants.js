@@ -5,12 +5,6 @@
  *
  * @description
  *   All user-facing message templates and inline keyboard layouts.
- *   Every string the bot sends to Telegram lives here.
- *
- * @exports
- *   startMessage, helpMessage, statusMessage, notAdminMessage,
- *   linkDeletedMessage, promotionDeletedMessage, botAddedMessage,
- *   onlyOwnerMessage, onlyAdminMessage, groupOnlyMessage
  *
  * @author  Shinei Nouzen
  * @license MIT
@@ -28,6 +22,7 @@ I Aᴍ Tʜᴇ Gᴜᴀʀᴅɪᴀɴ Oғ Yᴏᴜʀ Cʜᴀᴛ — Aʟᴡᴀʏs Wᴀ�
 <b>🛡️ Wʜᴀᴛ I Dᴏ:</b>
 • Rᴇᴍᴏᴠᴇs ᴘʀᴏᴍᴏᴛɪᴏɴᴀʟ ʟɪɴᴋs ғʀᴏᴍ ʀᴇɢᴜʟᴀʀ ᴍᴇᴍʙᴇʀs
 • Dᴇᴛᴇᴄᴛs ᴀɴᴅ ʀᴇᴍᴏᴠᴇs sᴘᴀᴍ ᴄᴏɴᴛᴇɴᴛ
+• Tʀᴀᴄᴋs ʀᴇᴘᴇᴀᴛ ᴏғғᴇɴᴅᴇʀs ᴡɪᴛʜ ᴇsᴄᴀʟᴀᴛɪɴɢ ᴡᴀʀɴɪɴɢs
 • Rᴇsᴘᴇᴄᴛs ᴀᴅᴍɪɴ ᴍᴇssᴀɢᴇs
 • Kᴇᴇᴘs ʏᴏᴜʀ ɢʀᴏᴜᴘ ᴄʟᴇᴀɴ ᴀɴᴅ ᴛɪᴅʏ
 
@@ -35,22 +30,41 @@ Usᴇ Tʜᴇ Bᴜᴛᴛᴏɴs Bᴇʟᴏᴡ. Aɴᴅ Kɴᴏᴡ Tʜᴀᴛ I'ᴍ Aʟ
 
 export const helpMessage = `📚 <b>Cᴏᴍᴍᴀɴᴅs — Pᴀʏ Aᴛᴛᴇɴᴛɪᴏɴ</b>
 
-Dᴏɴ'ᴛ Mᴀᴋᴇ Mᴇ Exᴘʟᴀɪɴ Tᴡɪᴄᴇ.
-
 🔹 <code>/start</code> — Wʜᴇʀᴇ Yᴏᴜ Mᴇᴛ Mᴇ.
-🔹 <code>/help</code> — Tʜɪs Vᴇʀʏ Mᴇssᴀɢᴇ.
-🔹 <code>/status</code> — Cʜᴇᴄᴋ Iғ I'ᴍ Pʀᴏᴘᴇʀʟʏ Cᴏɴғɪɢᴜʀᴇᴅ.
+🔹 <code>/help</code> — Tʜɪs Mᴇssᴀɢᴇ.
+🔹 <code>/status</code> — Cʜᴇᴄᴋ Mʏ Cᴏɴғɪɢᴜʀᴀᴛɪᴏɴ.
+🔹 <code>/stats</code> — Lɪᴠᴇ Sᴛᴀᴛɪsᴛɪᴄs.
+
+────────────────
+
+👑 <b>Gʀᴏᴜᴘ Aᴅᴍɪɴs Oɴʟʏ:</b>
+🔹 <code>/pause</code> — Pᴀᴜsᴇ ᴍᴏɴɪᴛᴏʀɪɴɢ ɪɴ ᴛʜɪs ᴄʜᴀᴛ.
+🔹 <code>/resume</code> — Rᴇsᴜᴍᴇ ᴍᴏɴɪᴛᴏʀɪɴɢ.
+🔹 <code>/settings</code> — Vɪᴇᴡ ᴘᴇʀ-ɢʀᴏᴜᴘ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ.
+🔹 <code>/whitelist</code> +<code>domain</code> — Aᴅᴅ ᴛʀᴜsᴛᴇᴅ ᴅᴏᴍᴀɪɴ.
+🔹 <code>/blacklist</code> +<code>domain</code> — Bʟᴏᴄᴋ sᴘᴇᴄɪғɪᴄ ᴅᴏᴍᴀɪɴ.
+🔹 <code>/keywords</code> +<code>word</code> — Aᴅᴅ ᴄᴜsᴛᴏᴍ ᴋᴇʏᴡᴏʀᴅ.
+🔹 <code>/warn</code> @<code>user</code> — Wᴀʀɴ ᴀ ᴜsᴇʀ ᴍᴀɴᴜᴀʟʟʏ.
+🔹 <code>/mute</code> @<code>user</code> — Mᴜᴛᴇ ᴀ sᴘᴀᴍᴍᴇʀ.
+
+────────────────
+
+🔒 <b>Oᴡɴᴇʀ Oɴʟʏ:</b>
+🔹 <code>/broadcast</code> — Sᴇɴᴅ ᴛᴏ ᴀʟʟ ᴄʜᴀᴛs.
+🔹 <code>/chats</code> — Lɪsᴛ ᴀʟʟ ᴀᴄᴛɪᴠᴇ ᴄʜᴀᴛs.
+🔹 <code>/log</code> — Vɪᴇᴡ ʀᴇᴄᴇɴᴛ ᴅᴇʟᴇᴛɪᴏɴs.
 
 ────────────────
 
 <b>🛡️ Hᴏᴡ I Wᴏʀᴋ:</b>
 1. Aᴅᴅ Mᴇ Tᴏ Yᴏᴜʀ Gʀᴏᴜᴘ.
 2. Mᴀᴋᴇ Mᴇ Aɴ Aᴅᴍɪɴ Wɪᴛʜ Dᴇʟᴇᴛᴇ Mᴇssᴀɢᴇ Pᴇʀᴍɪssɪᴏɴs.
-3. I Aᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ Rᴇᴍᴏᴠᴇ Pʀᴏᴍᴏᴛɪᴏɴᴀʟ Cᴏɴᴛᴇɴᴛs.
-4. Aᴅᴍɪɴs Aʀᴇ Exᴇᴍᴘᴛᴇᴅ. Nᴏ Sᴘᴀᴍ Fᴏʀ Tʜᴇᴍ.
+3. I Aᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ Rᴇᴍᴏᴠᴇ Pʀᴏᴍᴏᴛɪᴏɴᴀʟ Cᴏɴᴛᴇɴᴛ.
+4. Rᴇᴘᴇᴀᴛ Oғғᴇɴᴅᴇʀs Gᴇᴛ Esᴄᴀʟᴀᴛɪɴɢ Wᴀʀɴɪɴɢs.
+5. Aᴅᴍɪɴs Aʀᴇ Exᴇᴍᴘᴛᴇᴅ.
 
-💡 <b>Tɪᴘ:</b>
-• Mᴀᴋᴇ Sᴜʀᴇ I'ᴍ Aɴ Aᴅᴍɪɴ Fᴏʀ Mᴇ Tᴏ Wᴏʀᴋ.`
+💡 <b>Bᴇᴛᴀ Nᴏᴛᴇ:</b>
+Tʜɪs Bᴏᴛ Is Iɴ Bᴇᴛᴀ. Yᴏᴜ Mᴀʏ Fɪɴᴅ Bᴜɢs Oʀ Eʀʀᴏʀs. Rᴇᴘᴏʀᴛ Tʜᴇᴍ Tᴏ @Shineii86.`
 
 export const notAdminMessage = `⚠️ Хмпф. I Mᴜsᴛ Bᴇ Aɴ Aᴅᴍɪɴ Wɪᴛʜ Dᴇʟᴇᴛᴇ Mᴇssᴀɢᴇ Pᴇʀᴍɪssɪᴏɴs Tᴏ Fᴜɴᴄᴛɪᴏɴ Pʀᴏᴘᴇʀʟʏ. Dᴏɴ'ᴛ Wᴀsᴛᴇ Mʏ Tɪᴍᴇ.`
 
@@ -58,15 +72,20 @@ export const linkDeletedMessage = (username) =>
     `🚫 @${username}, Pʀᴏᴍᴏᴛɪᴏɴᴀʟ Cᴏɴᴛᴇɴᴛ Is Nᴏᴛ Aʟʟᴏᴡᴇᴅ Hᴇʀᴇ. I'ᴠᴇ Rᴇᴍᴏᴠᴇᴅ Iᴛ.`
 
 export const promotionDeletedMessage = (username) =>
-    `🚫 @${username}, Sᴘᴀᴍ Aɴᴅ Pʀᴏᴍᴏᴛɪᴏɴᴀʟ Cᴏɴᴛᴇɴᴛ Aʀᴇ Sᴛʀɪᴄᴛʟʏ Pʀᴏʜɪʙɪᴛᴇᴅ. Dᴏɴ'ᴛ Tᴇsᴛ Mᴇ.`
+    `🚫 @${username}, Sᴘᴀᴍ Is Sᴛʀɪᴄᴛʟʏ Pʀᴏʜɪʙɪᴛᴇᴅ. Dᴏɴ'ᴛ Tᴇsᴛ Mᴇ.`
+
+export const repeatOffenderMessage = (username, count) =>
+    `⚠️ @${username}, Tʜɪs Is Wᴀʀɴɪɴɢ Nᴜᴍʙᴇʀ <b>${count}</b>. Nᴇxᴛ Tɪᴍᴇ Yᴏᴜ'ʟʟ Bᴇ Mᴜᴛᴇᴅ.`
 
 export const botAddedMessage = `🎉 Tʜᴀɴᴋ Yᴏᴜ Fᴏʀ Aᴅᴅɪɴɢ Mᴇ. I'ʟʟ Kᴇᴇᴘ Tʜɪs Pʟᴀᴄᴇ Cʟᴇᴀɴ Fʀᴏᴍ Sᴘᴀᴍ Aɴᴅ Pʀᴏᴍᴏᴛɪᴏɴᴀʟ Lɪɴᴋs.
 
-Mᴀᴋᴇ Mᴇ Aɴ Aᴅᴍɪɴ Sᴏ I Cᴀɴ Dᴏ Mʏ Jᴏʙ.`
+Mᴀᴋᴇ Mᴇ Aɴ Aᴅᴍɪɴ Sᴏ I Cᴀɴ Dᴏ Mʏ Jᴏʙ.
+
+⚠️ <b>Bᴇᴛᴀ Vᴇʀsɪᴏɴ:</b> Yᴏᴜ Mᴀʏ Eɴᴄᴏᴜɴᴛᴇʀ Bᴜɢs. Rᴇᴘᴏʀᴛ Tʜᴇᴍ Tᴏ @Shineii86.`
 
 export const botAlreadyPresentMessage = `Хмпф. I'ᴍ Aʟʀᴇᴀᴅʏ Hᴇʀᴇ. Dᴏɴ'ᴛ Yᴏᴜ Rᴇᴍᴇᴍʙᴇʀ?`
 
-export const onlyOwnerMessage = `👑 Tʜɪs Cᴏᴍᴍᴀɴᴅ Is Fᴏʀ Tʜᴇ Oᴡɴᴇʀ. Yᴏᴜ Tʜɪɴᴋ Yᴏᴜ Cᴀɴ Jᴜsᴛ—? Дурак.`
+export const onlyOwnerMessage = `👑 Tʜɪs Cᴏᴍᴍᴀɴᴅ Is Fᴏʀ Tʜᴇ Oᴡɴᴇʀ. Oɴʟʏ. Yᴏᴜ Tʜɪɴᴋ Yᴏᴜ Cᴀɴ Jᴜsᴛ—? Дурак.`
 
 export const onlyAdminMessage = `🔒 Aᴅᴍɪɴ Pᴇʀᴍɪssɪᴏɴs Rᴇǫᴜɪʀᴇᴅ. Dᴏɴ'ᴛ Eᴠᴇɴ Tʀʏ Wɪᴛʜᴏᴜᴛ Tʜᴇᴍ.`
 
@@ -81,5 +100,39 @@ export const statusNotAdminMessage = `❌ <b>Sᴛᴀᴛᴜs: Nᴏᴛ Cᴏɴғɪ�
 I'ᴍ Nᴏᴛ Aɴ Aᴅᴍɪɴ Iɴ Tʜɪs Gʀᴏᴜᴘ. Pʟᴇᴀsᴇ Mᴀᴋᴇ Mᴇ Aɴ Aᴅᴍɪɴ Wɪᴛʜ Dᴇʟᴇᴛᴇ Mᴇssᴀɢᴇ Pᴇʀᴍɪssɪᴏɴs.`
 
 export const statusPrivateMessage = `ℹ️ Pʟᴇᴀsᴇ Usᴇ <code>/status</code> Iɴ A Gʀᴏᴜᴘ Tᴏ Cʜᴇᴄᴋ Iғ I'ᴍ Wᴏʀᴋɪɴɢ Tʜᴇʀᴇ.`
+
+export const pausedMessage = `⏸️ <b>Mᴏɴɪᴛᴏʀɪɴɢ Pᴀᴜsᴇᴅ</b>
+
+I Wᴏɴ'ᴛ Rᴇᴍᴏᴠᴇ Aɴʏ Cᴏɴᴛᴇɴᴛ Uɴᴛɪʟ Yᴏᴜ Usᴇ <code>/resume</code>. Dᴏɴ'ᴛ Gᴇᴛ Tᴏᴏ Cᴏᴍғᴏʀᴛᴀʙʟᴇ.`
+
+export const resumedMessage = `▶️ <b>Mᴏɴɪᴛᴏʀɪɴɢ Rᴇsᴜᴍᴇᴅ</b>
+
+I'ᴍ Bᴀᴄᴋ. Tɪᴍᴇ Tᴏ Kᴇᴇᴘ Tʜɪɴɢs Cʟᴇᴀɴ Aɢᴀɪɴ.`
+
+export const notPausedMessage = `ℹ️ Mᴏɴɪᴛᴏʀɪɴɢ Isɴ'ᴛ Pᴀᴜsᴇᴅ Hᴇʀᴇ. Wᴇʀᴇ Yᴏᴜ Tʀʏɪɴɢ Tᴏ Gᴇᴛ Mʏ Aᴛᴛᴇɴᴛɪᴏɴ?`
+
+export const broadcastStarted = `📡 Bʀᴏᴀᴅᴄᴀsᴛɪɴɢ… Lɪsᴛᴇɴ Uᴘ, Eᴠᴇʀʏᴏɴᴇ.`
+
+export const broadcastDone = (success, failed) =>
+    `✅ <b>Bʀᴏᴀᴅᴄᴀsᴛ Cᴏᴍᴘʟᴇᴛᴇ!</b>\n\n📨 Sᴇɴᴛ: ${success}\n❌ Fᴀɪʟᴇᴅ: ${failed}\n\nХмпф. Tʜᴇʏ'ᴠᴇ Bᴇᴇɴ Nᴏᴛɪғɪᴇᴅ.`
+
+export const logEmptyMessage = `📋 Nᴏ Dᴇʟᴇᴛɪᴏɴs Lᴏɢɢᴇᴅ Yᴇᴛ. Eɪᴛʜᴇʀ I'ᴍ Nᴏᴛ Wᴏʀᴋɪɴɢ Oʀ Yᴏᴜʀ Gʀᴏᴜᴘ Is Rᴇᴍᴀʀᴋᴀʙʟʏ Cʟᴇᴀɴ.`
+
+export const mutedMessage = (username) =>
+    `🤐 @${username} Hᴀs Bᴇᴇɴ Mᴜᴛᴇᴅ. Tʜᴇʏ Wᴏɴ'ᴛ Bᴇ Aʙʟᴇ Tᴏ Sᴇɴᴅ Mᴇssᴀɢᴇs Fᴏʀ 1 Hᴏᴜʀ.`
+
+export const warnedMessage = (username, count) =>
+    `⚠️ @${username} Hᴀs Bᴇᴇɴ Wᴀʀɴᴇᴅ (${count}).`
+
+export const whitelistUpdatedMessage = `✅ Wʜɪᴛᴇʟɪsᴛ Uᴘᴅᴀᴛᴇᴅ.`
+
+export const blacklistUpdatedMessage = `✅ Bʟᴀᴄᴋʟɪsᴛ Uᴘᴅᴀᴛᴇᴅ.`
+
+export const keywordsUpdatedMessage = `✅ Kᴇʏᴡᴏʀᴅs Uᴘᴅᴀᴛᴇᴅ.`
+
+export const betaNotice = `⚠️ <b>Bᴇᴛᴀ Vᴇʀsɪᴏɴ</b>
+Tʜɪs Bᴏᴛ Is Iɴ Bᴇᴛᴀ. Yᴏᴜ Mᴀʏ Fɪɴᴅ Bᴜɢs, Eʀʀᴏʀs, Oʀ Uɴᴇxᴘᴇᴄᴛᴇᴅ Bᴇʜᴀᴠɪᴏʀ. Pʟᴇᴀsᴇ Rᴇᴘᴏʀᴛ Tʜᴇᴍ Tᴏ @Shineii86 Sᴏ Tʜᴇʏ Cᴀɴ Bᴇ Fɪxᴇᴅ.
+
+Sᴜɢɢᴇsᴛɪᴏɴs Aɴᴅ Fᴇᴇᴅʙᴀᴄᴋ Aʀᴇ Aʟᴡᴀʏs Wᴇʟᴄᴏᴍᴇ.`
 
 export const versionInfo = `🚀 <b>Vᴇʀsɪᴏɴ:</b> v${VERSION}`

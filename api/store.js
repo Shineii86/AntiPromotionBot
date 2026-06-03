@@ -9,7 +9,8 @@
  *   - Local/Docker/Render: uses data/state.json file
  *   - Cloudflare Workers / Fallback: in-memory (non-persistent)
  *
- *   Persists: chats, stats counters, config settings.
+ *   Persists: chats, stats, paused chats, per-group config,
+ *   user violations, recent deletions, command usage.
  *
  * @exports Store
  *
@@ -67,7 +68,14 @@ function getDefaultState() {
             messagesProcessed: 0,
             promotionsStopped: 0,
             linksRemoved: 0,
+            warningsSent: 0,
+            repeatOffenders: 0,
         },
+        paused: [],
+        commandUsage: {},
+        recentDeletions: [],
+        userViolations: {},
+        perChatConfig: {},
     };
 }
 
@@ -78,7 +86,15 @@ function fileLoad() {
         if (fs.existsSync(STATE_FILE)) {
             const raw = fs.readFileSync(STATE_FILE, 'utf-8');
             const parsed = JSON.parse(raw);
-            state = { ...getDefaultState(), ...parsed, stats: { ...getDefaultState().stats, ...parsed.stats } };
+            const defaults = getDefaultState();
+            state = {
+                ...defaults,
+                ...parsed,
+                stats: { ...defaults.stats, ...parsed.stats },
+                commandUsage: { ...defaults.commandUsage, ...parsed.commandUsage },
+                userViolations: { ...defaults.userViolations, ...parsed.userViolations },
+                perChatConfig: { ...defaults.perChatConfig, ...parsed.perChatConfig },
+            };
             log.info(`[Store:File] Loaded state: ${Object.keys(state.chats).length} chats`);
         } else {
             state = getDefaultState();
@@ -124,7 +140,15 @@ async function upstashLoad() {
     try {
         const data = await redis.get(KV_KEY);
         if (data) {
-            state = { ...getDefaultState(), ...data, stats: { ...getDefaultState().stats, ...data.stats } };
+            const defaults = getDefaultState();
+            state = {
+                ...defaults,
+                ...data,
+                stats: { ...defaults.stats, ...data.stats },
+                commandUsage: { ...defaults.commandUsage, ...data.commandUsage },
+                userViolations: { ...defaults.userViolations, ...data.userViolations },
+                perChatConfig: { ...defaults.perChatConfig, ...data.perChatConfig },
+            };
             log.info(`[Store:Upstash] Loaded state: ${Object.keys(state.chats).length} chats`);
         } else {
             state = getDefaultState();
@@ -218,6 +242,8 @@ async function removeChat(chatId) {
     const key = String(chatId);
     if (state.chats[key]) {
         delete state.chats[key];
+        delete state.perChatConfig[key];
+        state.paused = state.paused.filter(id => String(id) !== key);
         scheduleSave();
         return true;
     }
@@ -245,6 +271,82 @@ async function trackLinkRemoved() {
     scheduleSave();
 }
 
+async function trackWarning() {
+    state.stats.warningsSent++;
+    scheduleSave();
+}
+
+async function trackRepeatOffender() {
+    state.stats.repeatOffenders++;
+    scheduleSave();
+}
+
+async function trackCommand(cmd) {
+    const name = cmd.replace('/', '');
+    state.commandUsage[name] = (state.commandUsage[name] || 0) + 1;
+    scheduleSave();
+}
+
+function getCommandUsage() { return state.commandUsage; }
+
+async function addDeletion(entry) {
+    state.recentDeletions.push(entry);
+    if (state.recentDeletions.length > 50) state.recentDeletions.shift();
+    scheduleSave();
+}
+
+function getRecentDeletions(limit = 20) {
+    return state.recentDeletions.slice(-limit).reverse();
+}
+
+function isPaused(chatId) { return state.paused.includes(Number(chatId)); }
+function getPausedCount() { return state.paused.length; }
+
+async function pauseChat(chatId) {
+    const id = Number(chatId);
+    if (!state.paused.includes(id)) {
+        state.paused.push(id);
+        scheduleSave();
+    }
+}
+
+async function resumeChat(chatId) {
+    const id = Number(chatId);
+    const idx = state.paused.indexOf(id);
+    if (idx !== -1) {
+        state.paused.splice(idx, 1);
+        scheduleSave();
+    }
+}
+
+function getUserViolations(chatId, userId) {
+    const key = `${chatId}:${userId}`;
+    return state.userViolations[key] || 0;
+}
+
+async function incrementUserViolation(chatId, userId) {
+    const key = `${chatId}:${userId}`;
+    state.userViolations[key] = (state.userViolations[key] || 0) + 1;
+    scheduleSave();
+    return state.userViolations[key];
+}
+
+async function resetUserViolations(chatId, userId) {
+    const key = `${chatId}:${userId}`;
+    delete state.userViolations[key];
+    scheduleSave();
+}
+
+function getPerChatConfig(chatId) {
+    return state.perChatConfig[String(chatId)] || {};
+}
+
+async function setPerChatConfig(chatId, config) {
+    const key = String(chatId);
+    state.perChatConfig[key] = { ...(state.perChatConfig[key] || {}), ...config };
+    scheduleSave();
+}
+
 function getStorageType() { return storageType; }
 
 export const Store = {
@@ -260,4 +362,19 @@ export const Store = {
     trackMessage,
     trackPromotionStopped,
     trackLinkRemoved,
+    trackWarning,
+    trackRepeatOffender,
+    trackCommand,
+    getCommandUsage,
+    addDeletion,
+    getRecentDeletions,
+    isPaused,
+    getPausedCount,
+    pauseChat,
+    resumeChat,
+    getUserViolations,
+    incrementUserViolation,
+    resetUserViolations,
+    getPerChatConfig,
+    setPerChatConfig,
 };

@@ -5,11 +5,9 @@
  *
  * @description
  *   Core bot logic. Processes all Telegram updates:
- *   commands, callback queries, group join events,
- *   and the anti-promotion engine.
- *
- * @exports onUpdate(data, botApi, RestrictedChats, botUsername,
- *                   ownerId, webhookSecret, botPhoto)
+ *   commands, callback queries, anti-promotion engine,
+ *   repeat offender tracking, per-group config,
+ *   report system, broadcast, and more.
  *
  * @author  Shinei Nouzen
  * @license MIT
@@ -21,7 +19,11 @@ import {
     linkDeletedMessage, promotionDeletedMessage, botAddedMessage,
     onlyOwnerMessage, onlyAdminMessage, groupOnlyMessage,
     statusOkMessage, statusNotAdminMessage, statusPrivateMessage,
-    versionInfo
+    pausedMessage, resumedMessage, notPausedMessage,
+    broadcastStarted, broadcastDone, logEmptyMessage,
+    mutedMessage, warnedMessage, repeatOffenderMessage,
+    whitelistUpdatedMessage, blacklistUpdatedMessage, keywordsUpdatedMessage,
+    betaNotice, versionInfo
 } from './constants.js';
 import { containsLinks, detectPromotion, log } from './helper.js';
 import { getAdFooter } from './ads.js';
@@ -32,6 +34,10 @@ const rateLimitMap = {};
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW = 10000;
 const AUTO_DELETE_MS = 5000;
+const LOG_MAX = 50;
+
+const startTime = Date.now();
+const lastBotMessage = {};
 
 function formatUptime(ms) {
     const s = Math.floor(ms / 1000);
@@ -42,6 +48,20 @@ function formatUptime(ms) {
     if (h > 0) return `${h}ʜ ${m % 60}ᴍ ${s % 60}s`;
     if (m > 0) return `${m}ᴍ ${s % 60}s`;
     return `${s}s`;
+}
+
+function formatIST(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    const ist = new Date(d.getTime() + (5 * 60 + 30) * 60 * 1000);
+    const day = String(ist.getUTCDate()).padStart(2, '0');
+    const month = ['Jᴀɴ', 'Fᴇʙ', 'Mᴀʀ', 'Aᴘʀ', 'Mᴀʏ', 'Jᴜɴ', 'Jᴜʟ', 'Aᴜɢ', 'Sᴇᴘ', 'Oᴄᴛ', 'Nᴏᴠ', 'Dᴇᴄ'][ist.getUTCMonth()];
+    const year = ist.getUTCFullYear();
+    let hours = ist.getUTCHours();
+    const ampm = hours >= 12 ? 'Pᴍ' : 'Aᴍ';
+    hours = hours % 12 || 12;
+    const mins = String(ist.getUTCMinutes()).padStart(2, '0');
+    const secs = String(ist.getUTCSeconds()).padStart(2, '0');
+    return `${day} ${month} ${year}, ${hours}:${mins}:${secs} ${ampm} Isᴛ`;
 }
 
 function withAd(msg) {
@@ -77,10 +97,6 @@ function checkRateLimit(chatId) {
     return true;
 }
 
-const startTime = Date.now();
-
-const lastBotMessage = {};
-
 async function cleanupMessages(botApi, chatId, userMessageId) {
     if (lastBotMessage[chatId]) {
         try { await botApi.deleteMessage(chatId, lastBotMessage[chatId]); } catch {}
@@ -96,36 +112,59 @@ function trackBotMessage(chatId, sent) {
 
 function getStartKeyboard(botUsername) {
     return [
-        [
-            { text: '✚ Aᴅᴅ Tᴏ Gʀᴏᴜᴘ', url: `https://t.me/${botUsername}?startgroup=true` },
-        ],
-        [
-            { text: '📚 Hᴇʟᴘ', callback_data: 'cb_help' },
-        ],
-        [
-            { text: '💥 Cʟᴏsᴇ ✕', callback_data: 'cb_close' },
-        ],
+        [{ text: '✚ Aᴅᴅ Tᴏ Gʀᴏᴜᴘ', url: `https://t.me/${botUsername}?startgroup=true` }],
+        [{ text: '📚 Hᴇʟᴘ', callback_data: 'cb_help' }],
+        [{ text: '📊 Sᴛᴀᴛs', callback_data: 'cb_stats' }],
+        [{ text: '💥 Cʟᴏsᴇ ✕', callback_data: 'cb_close' }],
     ];
 }
 
 function getBackKeyboard() {
     return [
-        [
-            { text: '◁ Bᴀᴄᴋ', callback_data: 'cb_menu' },
-            { text: 'Cʟᴏsᴇ ✕', callback_data: 'cb_close' },
-        ],
+        [{ text: '◁ Bᴀᴄᴋ', callback_data: 'cb_menu' }, { text: 'Cʟᴏsᴇ ✕', callback_data: 'cb_close' }],
     ];
 }
 
 function getCloseKeyboard() {
     return [
-        [
-            { text: 'Cʟᴏsᴇ ✕', callback_data: 'cb_close' },
-        ],
+        [{ text: 'Cʟᴏsᴇ ✕', callback_data: 'cb_close' }],
     ];
 }
 
-export async function onUpdate(data, botApi, RestrictedChats, botUsername, ownerId, webhookSecret, botPhoto) {
+function getStatsMessage(botUsername, logChannel) {
+    const storeStats = Store.getStats();
+    const uptime = formatUptime(Date.now() - startTime);
+    const cmdLines = Object.entries(Store.getCommandUsage())
+        .map(([cmd, count]) => `<code>/${cmd}</code> — ${count}`)
+        .join('\n') || 'Nᴏɴᴇ Yᴇᴛ.';
+    const deletionLog = Store.getRecentDeletions(5);
+    let recentText = '';
+    if (deletionLog.length > 0) {
+        recentText = '\n\n📋 <b>Lᴀᴛᴇsᴛ Dᴇʟᴇᴛɪᴏɴs:</b>\n' +
+            deletionLog.slice(0, 5).map((e, i) =>
+                `${i + 1}. ${e.type} → ${e.user} ɪɴ ${e.chat} (${formatIST(e.time)})`
+            ).join('\n');
+    }
+    return `${withAd(`📊 <b>Aɴᴛɪ-Pʀᴏᴍᴏᴛɪᴏɴ Sᴛᴀᴛs</b>
+
+📨 <b>Mᴇssᴀɢᴇs Pʀᴏᴄᴇssᴇᴅ:</b> ${storeStats.messagesProcessed.toLocaleString()}
+🚫 <b>Lɪɴᴋs Rᴇᴍᴏᴠᴇᴅ:</b> ${storeStats.linksRemoved.toLocaleString()}
+🔍 <b>Pʀᴏᴍᴏᴛɪᴏɴs Sᴛᴏᴘᴘᴇᴅ:</b> ${storeStats.promotionsStopped.toLocaleString()}
+⚠️ <b>Wᴀʀɴɪɴɢs Sᴇɴᴛ:</b> ${storeStats.warningsSent.toLocaleString()}
+🔄 <b>Rᴇᴘᴇᴀᴛ Oғғᴇɴᴅᴇʀs:</b> ${storeStats.repeatOffenders.toLocaleString()}
+💬 <b>Uɴɪǫᴜᴇ Cʜᴀᴛs:</b> ${uniqueChats.size.toLocaleString()}
+⏸️ <b>Pᴀᴜsᴇᴅ Cʜᴀᴛs:</b> ${Store.getPausedCount().toLocaleString()}
+⏱️ <b>Uᴘᴛɪᴍᴇ:</b> ${uptime}
+🕐 <b>Sᴛᴀʀᴛᴇᴅ:</b> ${formatIST(startTime)}
+💾 <b>Sᴛᴏʀᴀɢᴇ:</b> ${Store.getStorageType()}
+
+📋 <b>Cᴏᴍᴍᴀɴᴅ Usᴀɢᴇ:</b>
+${cmdLines}${recentText}
+
+${betaNotice}`)}`;
+}
+
+export async function onUpdate(data, botApi, RestrictedChats, botUsername, ownerId, webhookSecret, botPhoto, logChannel) {
 
     await Store.load();
 
@@ -135,9 +174,7 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
         const messageId = cq.message?.message_id;
 
         const linkPreview = botPhoto ? {
-            url: botPhoto,
-            prefer_large_media: true,
-            show_above_text: true
+            url: botPhoto, prefer_large_media: true, show_above_text: true
         } : null;
 
         const editMsg = async (text, keyboard) => {
@@ -149,16 +186,29 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
                 case 'cb_help':
                     await editMsg(withAd(helpMessage), getBackKeyboard());
                     break;
-                case 'cb_menu': {
-                    const caption = withAd(startMessage);
-                    await editMsg(caption, getStartKeyboard(botUsername));
+                case 'cb_menu':
+                    await editMsg(withAd(startMessage), getStartKeyboard(botUsername));
                     break;
-                }
+                case 'cb_stats':
+                    await editMsg(getStatsMessage(botUsername, logChannel), getBackKeyboard());
+                    break;
                 case 'cb_close':
                     await botApi.deleteMessage(chatId, messageId);
                     break;
                 default:
-                    await botApi.answerCallbackQuery(cq.id, '❓ Uɴᴋɴᴏᴡɴ Aᴄᴛɪᴏɴ.', true);
+                    if (cq.data.startsWith('cb_report:')) {
+                        const parts = cq.data.split(':');
+                        const reportedChatId = parts[1];
+                        const reportedUserId = parts[2];
+                        const reportedMsgId = parts[3];
+                        if (logChannel) {
+                            const reportText = `🚨 <b>Rᴇᴘᴏʀᴛ</b>\n\n👤 <b>Usᴇʀ:</b> <code>${reportedUserId}</code>\n💬 <b>Cʜᴀᴛ:</b> <code>${reportedChatId}</code>\n📝 <b>Mᴇssᴀɢᴇ:</b> <a href="https://t.me/c/${reportedChatId.replace('-100', '')}/${reportedMsgId}">Jᴜᴍᴘ</a>`;
+                            try { await botApi.sendMessage(logChannel, reportText); } catch {}
+                        }
+                        await botApi.answerCallbackQuery(cq.id, '🚨 Rᴇᴘᴏʀᴛ Sᴜʙᴍɪᴛᴛᴇᴅ. Aᴅᴍɪɴs Wɪʟʟ Rᴇᴠɪᴇᴡ.', false);
+                    } else {
+                        await botApi.answerCallbackQuery(cq.id, '❓ Uɴᴋɴᴏᴡɴ Aᴄᴛɪᴏɴ.', true);
+                    }
                     return;
             }
             await botApi.answerCallbackQuery(cq.id);
@@ -176,16 +226,14 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
         const text = msg.text || msg.caption || '';
         const chatType = msg.chat.type;
         const userId = msg.from?.id;
-
         const chatTitle = msg.chat.title || msg.chat.first_name || String(chatId);
+
         await Store.updateChat(chatId, chatTitle, chatType);
         await Store.trackMessage();
         uniqueChats.add(chatId);
 
         const linkPreview = botPhoto ? {
-            url: botPhoto,
-            prefer_large_media: true,
-            show_above_text: true
+            url: botPhoto, prefer_large_media: true, show_above_text: true
         } : null;
 
         if (msg.new_chat_members && Array.isArray(msg.new_chat_members)) {
@@ -193,12 +241,10 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
                 member => member.username?.toLowerCase() === botUsername.toLowerCase()
             );
             if (isBotAdded) {
-                let botAdded = botAddedMessage;
+                let welcome = botAddedMessage;
                 const isAdmin = await isGroupAdmin(botApi, chatId, userId);
-                if (!isAdmin) {
-                    botAdded += '\n\n' + notAdminMessage;
-                }
-                const sent = await botApi.sendMessage(chatId, botAdded, getCloseKeyboard());
+                if (!isAdmin) welcome += '\n\n' + notAdminMessage;
+                const sent = await botApi.sendMessage(chatId, welcome, getCloseKeyboard());
                 trackBotMessage(chatId, sent);
                 return;
             }
@@ -212,7 +258,7 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
 
         if (chatType === 'private') {
             if (text && text.startsWith('/')) {
-                await handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview);
+                await handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview, logChannel);
                 return;
             }
             const sent = await botApi.sendMessage(chatId, withAd(startMessage), getStartKeyboard(botUsername), linkPreview);
@@ -222,44 +268,97 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
 
         if (isGroupChat(chatType)) {
             if (text && text.startsWith('/')) {
-                await handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview);
+                await handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview, logChannel);
                 return;
             }
-
             if (!text) return;
 
             const isAdmin = await isGroupAdmin(botApi, chatId, userId);
+            if (isAdmin) return;
 
-            if (!isAdmin) {
-                const hasLink = containsLinks(text);
-                const isPromo = detectPromotion(text);
+            if (Store.isPaused(chatId)) return;
 
-                if (hasLink || isPromo) {
-                    await botApi.deleteMessage(chatId, messageId);
+            if (!checkRateLimit(chatId)) return;
 
-                    if (hasLink) await Store.trackLinkRemoved();
-                    if (isPromo) await Store.trackPromotionStopped();
+            const config = Store.getPerChatConfig(chatId);
+            const whitelist = config.whitelist || [];
+            const blacklist = config.blacklist || [];
+            const customKeywords = config.customKeywords || [];
 
-                    const userDisplay = msg.from?.username || String(msg.from?.id || 'User');
-                    const delMsg = hasLink
-                        ? linkDeletedMessage(userDisplay)
-                        : promotionDeletedMessage(userDisplay);
+            const hasLink = containsLinks(text, whitelist);
+            const isPromo = detectPromotion(text, customKeywords);
+            const hasBlacklisted = blacklist.some(d => text.toLowerCase().includes(d.toLowerCase()));
 
-                    const sent = await botApi.sendMessage(chatId, delMsg, null, linkPreview);
-                    if (sent?.result?.message_id) {
-                        setTimeout(async () => {
-                            try { await botApi.deleteMessage(chatId, sent.result.message_id); } catch {}
-                        }, AUTO_DELETE_MS);
-                    }
+            if (hasLink || isPromo || hasBlacklisted) {
+                await botApi.deleteMessage(chatId, messageId);
+
+                const violationCount = await Store.incrementUserViolation(chatId, userId);
+                const userDisplay = msg.from?.username || String(msg.from?.id || 'User');
+
+                await Store.addDeletion({
+                    time: Date.now(),
+                    chat: chatTitle,
+                    chatId,
+                    user: userDisplay,
+                    userId,
+                    type: hasBlacklisted ? 'blacklisted' : hasLink ? 'link' : 'promotion',
+                });
+
+                if (hasLink) await Store.trackLinkRemoved();
+                if (isPromo || hasBlacklisted) await Store.trackPromotionStopped();
+
+                let delMsg;
+                let keyboard = null;
+                let deleteAfter = AUTO_DELETE_MS;
+
+                if (violationCount >= 5) {
+                    await Store.trackRepeatOffender();
+                    try {
+                        await botApi.callApi('restrictChatMember', {
+                            chat_id: chatId,
+                            user_id: userId,
+                            permissions: { can_send_messages: false },
+                            until_date: Math.floor(Date.now() / 1000) + 3600,
+                        });
+                    } catch {}
+                    delMsg = mutedMessage(userDisplay);
+                    deleteAfter = 8000;
+                } else if (violationCount >= 3) {
+                    await Store.trackWarning();
+                    delMsg = repeatOffenderMessage(userDisplay, violationCount);
+                    deleteAfter = 8000;
+                } else if (hasBlacklisted) {
+                    delMsg = linkDeletedMessage(userDisplay);
+                } else if (hasLink) {
+                    delMsg = linkDeletedMessage(userDisplay);
+                    keyboard = [[{ text: '🚨 Rᴇᴘᴏʀᴛ', callback_data: `cb_report:${chatId}:${userId}:${messageId}` }]];
+                } else {
+                    delMsg = promotionDeletedMessage(userDisplay);
+                }
+
+                const sent = await botApi.sendMessage(chatId, delMsg, keyboard, linkPreview);
+                if (sent?.result?.message_id) {
+                    setTimeout(async () => {
+                        try { await botApi.deleteMessage(chatId, sent.result.message_id); } catch {}
+                    }, deleteAfter);
+                }
+
+                if (logChannel) {
+                    const logText = `🚫 <b>Dᴇʟᴇᴛɪᴏɴ</b>\n\n👤 <b>Usᴇʀ:</b> @${userDisplay} (<code>${userId}</code>)\n💬 <b>Cʜᴀᴛ:</b> ${chatTitle} (<code>${chatId}</code>)\n📝 <b>Tʏᴘᴇ:</b> ${hasBlacklisted ? 'Bʟᴀᴄᴋʟɪsᴛᴇᴅ Dᴏᴍᴀɪɴ' : hasLink ? 'Lɪɴᴋ' : 'Pʀᴏᴍᴏᴛɪᴏɴ'}\n⚠️ <b>Vɪᴏʟᴀᴛɪᴏɴs:</b> ${violationCount}`;
+                    try { await botApi.sendMessage(logChannel, logText); } catch {}
                 }
             }
         }
     }
 }
 
-async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview) {
+async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, linkPreview, logChannel) {
     const cmd = text.split(' ')[0].toLowerCase();
+    const args = text.split(' ').slice(1).join(' ').trim();
     const userId = msg.from?.id;
+    const chatType = msg.chat.type;
+
+    await Store.trackCommand(cmd);
 
     switch (cmd) {
         case '/start':
@@ -276,16 +375,295 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
 
         case '/status':
             await cleanupMessages(botApi, chatId, msg.message_id);
-            if (isGroupChat(msg.chat.type)) {
+            if (isGroupChat(chatType)) {
                 const botInfo = await botApi.getMe();
                 const botId = botInfo?.result?.id;
                 const isBotAdm = botId ? await isGroupAdmin(botApi, chatId, botId) : false;
-                const statusMsg = isBotAdm ? statusOkMessage : statusNotAdminMessage;
-                const statusSent = await botApi.sendMessage(chatId, withAd(statusMsg), getCloseKeyboard(), linkPreview);
+                const paused = Store.isPaused(chatId) ? '\n\n⏸️ Mᴏɴɪᴛᴏʀɪɴɢ Is Cᴜʀʀᴇɴᴛʟʏ <b>Pᴀᴜsᴇᴅ</b>.' : '';
+                const statusSent = await botApi.sendMessage(chatId, withAd((isBotAdm ? statusOkMessage : statusNotAdminMessage) + paused), getCloseKeyboard(), linkPreview);
                 trackBotMessage(chatId, statusSent);
             } else {
                 const statusSent = await botApi.sendMessage(chatId, withAd(statusPrivateMessage), getCloseKeyboard(), linkPreview);
                 trackBotMessage(chatId, statusSent);
+            }
+            break;
+
+        case '/stats':
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            const statsSent = await botApi.sendMessage(chatId, getStatsMessage(botUsername, logChannel), getCloseKeyboard(), linkPreview);
+            trackBotMessage(chatId, statsSent);
+            break;
+
+        case '/pause':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            await Store.pauseChat(chatId);
+            const pauseSent = await botApi.sendMessage(chatId, withAd(pausedMessage), getCloseKeyboard(), linkPreview);
+            trackBotMessage(chatId, pauseSent);
+            break;
+
+        case '/resume':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!Store.isPaused(chatId)) {
+                await cleanupMessages(botApi, chatId, msg.message_id);
+                const s = await botApi.sendMessage(chatId, withAd(notPausedMessage), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            await Store.resumeChat(chatId);
+            const resumeSent = await botApi.sendMessage(chatId, withAd(resumedMessage), getCloseKeyboard(), linkPreview);
+            trackBotMessage(chatId, resumeSent);
+            break;
+
+        case '/settings':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            {
+                const cfg = Store.getPerChatConfig(chatId);
+                const whitelist = (cfg.whitelist || []).join(', ') || 'Nᴏɴᴇ';
+                const blacklist = (cfg.blacklist || []).join(', ') || 'Nᴏɴᴇ';
+                const keywords = (cfg.customKeywords || []).join(', ') || 'Nᴏɴᴇ';
+                const settingsMsg = `⚙️ <b>Sᴇᴛᴛɪɴɢs Fᴏʀ Tʜɪs Cʜᴀᴛ</b>\n\n✅ <b>Wʜɪᴛᴇʟɪsᴛ:</b> ${whitelist}\n🚫 <b>Bʟᴀᴄᴋʟɪsᴛ:</b> ${blacklist}\n🔍 <b>Cᴜsᴛᴏᴍ Kᴇʏᴡᴏʀᴅs:</b> ${keywords}\n⏸️ <b>Pᴀᴜsᴇᴅ:</b> ${Store.isPaused(chatId) ? 'Yᴇs' : 'Nᴏ'}\n\n${betaNotice}`;
+                const s = await botApi.sendMessage(chatId, withAd(settingsMsg), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
+            }
+            break;
+
+        case '/whitelist':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            if (!args) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/whitelist domain.com</code>', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            {
+                const cfg = Store.getPerChatConfig(chatId);
+                const list = cfg.whitelist || [];
+                const domain = args.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+                if (!list.includes(domain)) list.push(domain);
+                await Store.setPerChatConfig(chatId, { whitelist: list });
+                const s = await botApi.sendMessage(chatId, withAd(`${whitelistUpdatedMessage}\n➕ <code>${domain}</code>`), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
+            }
+            break;
+
+        case '/blacklist':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            if (!args) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/blacklist domain.com</code>', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            {
+                const cfg = Store.getPerChatConfig(chatId);
+                const list = cfg.blacklist || [];
+                const domain = args.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+                if (!list.includes(domain)) list.push(domain);
+                await Store.setPerChatConfig(chatId, { blacklist: list });
+                const s = await botApi.sendMessage(chatId, withAd(`${blacklistUpdatedMessage}\n🚫 <code>${domain}</code>`), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
+            }
+            break;
+
+        case '/keywords':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            if (!args) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/keywords word1 word2</code>', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            {
+                const cfg = Store.getPerChatConfig(chatId);
+                const existing = cfg.customKeywords || [];
+                const newWords = args.split(/\s+/).map(w => w.toLowerCase()).filter(w => w && !existing.includes(w));
+                const updated = [...existing, ...newWords];
+                await Store.setPerChatConfig(chatId, { customKeywords: updated });
+                const s = await botApi.sendMessage(chatId, withAd(`${keywordsUpdatedMessage}\n➕ ${newWords.join(', ')}`), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
+            }
+            break;
+
+        case '/warn':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            if (!args) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/warn @username</code>', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            {
+                const targetName = args.replace('@', '');
+                let targetId = null;
+                if (msg.reply_to_message?.from) {
+                    targetId = msg.reply_to_message.from.id;
+                }
+                if (targetId) {
+                    const count = await Store.incrementUserViolation(chatId, targetId);
+                    await Store.trackWarning();
+                    const s = await botApi.sendMessage(chatId, withAd(warnedMessage(targetName, count)), getCloseKeyboard(), linkPreview);
+                    trackBotMessage(chatId, s);
+                } else {
+                    const s = await botApi.sendMessage(chatId, '📵 Cᴏᴜʟᴅ Nᴏᴛ Iᴅᴇɴᴛɪғʏ Usᴇʀ. Rᴇᴘʟʏ Tᴏ Tʜᴇɪʀ Mᴇssᴀɢᴇ Oʀ Usᴇ /warn Iɴ Tʜᴇɪʀ Cʜᴀᴛ.', getCloseKeyboard());
+                    trackBotMessage(chatId, s);
+                }
+            }
+            break;
+
+        case '/mute':
+            if (!isGroupChat(chatType)) {
+                const s = await botApi.sendMessage(chatId, withAd(groupOnlyMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!await isGroupAdmin(botApi, chatId, userId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyAdminMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            if (!args && !msg.reply_to_message) {
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/mute @username</code> Oʀ Rᴇᴘʟʏ Tᴏ A Mᴇssᴀɢᴇ.', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            {
+                const muteUserId = msg.reply_to_message?.from?.id || args;
+                if (muteUserId && typeof muteUserId === 'number') {
+                    try {
+                        await botApi.callApi('restrictChatMember', {
+                            chat_id: chatId,
+                            user_id: muteUserId,
+                            permissions: { can_send_messages: false },
+                            until_date: Math.floor(Date.now() / 1000) + 3600,
+                        });
+                        const name = msg.reply_to_message?.from?.username || 'Usᴇʀ';
+                        const s = await botApi.sendMessage(chatId, withAd(mutedMessage(name)), getCloseKeyboard(), linkPreview);
+                        trackBotMessage(chatId, s);
+                    } catch (e) {
+                        const s = await botApi.sendMessage(chatId, `📵 Fᴀɪʟᴇᴅ Tᴏ Mᴜᴛᴇ: ${e.message}`, getCloseKeyboard());
+                        trackBotMessage(chatId, s);
+                    }
+                } else {
+                    const s = await botApi.sendMessage(chatId, '📵 Cᴏᴜʟᴅ Nᴏᴛ Iᴅᴇɴᴛɪғʏ Usᴇʀ.', getCloseKeyboard());
+                    trackBotMessage(chatId, s);
+                }
+            }
+            break;
+
+        case '/broadcast':
+            if (!isOwner(userId, ownerId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyOwnerMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            if (!args) {
+                await cleanupMessages(botApi, chatId, msg.message_id);
+                const s = await botApi.sendMessage(chatId, '📝 Usᴀɢᴇ: <code>/broadcast &lt;message&gt;</code>', getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            {
+                let bSent = await botApi.sendMessage(chatId, broadcastStarted, getCloseKeyboard());
+                trackBotMessage(chatId, bSent);
+                const allChats = [...uniqueChats];
+                let success = 0, failed = 0;
+                for (const cid of allChats) {
+                    try {
+                        await botApi.sendMessage(cid, `📢 <b>Bʀᴏᴀᴅᴄᴀsᴛ</b>\n\n${args}`);
+                        success++;
+                    } catch { failed++; }
+                }
+                bSent = await botApi.sendMessage(chatId, withAd(broadcastDone(success, failed)), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, bSent);
+            }
+            break;
+
+        case '/log':
+            if (!isOwner(userId, ownerId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyOwnerMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            {
+                const deletions = Store.getRecentDeletions(20);
+                if (deletions.length === 0) {
+                    const s = await botApi.sendMessage(chatId, withAd(logEmptyMessage), getCloseKeyboard(), linkPreview);
+                    trackBotMessage(chatId, s); return;
+                }
+                const lines = deletions.map((e, i) =>
+                    `${i + 1}. [${e.type}] ${e.user} → ${e.chat} (${formatIST(e.time)})`
+                ).join('\n');
+                const s = await botApi.sendMessage(chatId, withAd(`📋 <b>Rᴇᴄᴇɴᴛ Dᴇʟᴇᴛɪᴏɴs:</b>\n\n${lines}`), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
+            }
+            break;
+
+        case '/chats':
+            if (!isOwner(userId, ownerId)) {
+                const s = await botApi.sendMessage(chatId, withAd(onlyOwnerMessage), getCloseKeyboard());
+                trackBotMessage(chatId, s); return;
+            }
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            {
+                const allChats = Store.getAllChats();
+                if (allChats.length === 0) {
+                    const s = await botApi.sendMessage(chatId, '📭 Nᴏ Aᴄᴛɪᴠᴇ Cʜᴀᴛs Yᴇᴛ.', getCloseKeyboard());
+                    trackBotMessage(chatId, s); return;
+                }
+                const chatLines = allChats.map((c, i) => {
+                    const typeEmoji = { group: '👥', supergroup: '👥', channel: '📢', private: '💬' }[c.type] || '❓';
+                    const paused = Store.isPaused(c.id) ? ' ⏸️' : '';
+                    return `${i + 1}. ${typeEmoji} ${c.title} (<code>${c.id}</code>)${paused}`;
+                }).join('\n');
+                const groups = allChats.filter(c => c.type === 'group' || c.type === 'supergroup').length;
+                const channels = allChats.filter(c => c.type === 'channel').length;
+                const privates = allChats.filter(c => c.type === 'private').length;
+                const s = await botApi.sendMessage(chatId, withAd(`💬 <b>Aʟʟ Cʜᴀᴛs (${allChats.length}):</b>\n\n${chatLines}\n\n📊 ${groups} ɢʀᴏᴜᴘs · ${channels} ᴄʜᴀɴɴᴇʟs · ${privates} ᴘʀɪᴠᴀᴛᴇ`), getCloseKeyboard(), linkPreview);
+                trackBotMessage(chatId, s);
             }
             break;
 

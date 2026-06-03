@@ -4,6 +4,61 @@ All notable changes to Anti-Promotion Bot are documented here.
 
 ---
 
+## [v1.1.0-beta] — 2026-06-03
+
+### ⚠️ Beta Release
+
+This is the first beta release. You may encounter bugs, errors, or unexpected behavior. Please report them to @Shineii86.
+
+### ✨ New Features
+
+- **Multi-Bot Support** — Run multiple Anti-Promotion bots from a single deployment via `BOT_TOKENS` env var. Fully backward compatible with `BOT_TOKEN` + `BOT_USERNAME`.
+- **`/stats` Command** — Live statistics showing messages processed, links removed, promotions stopped, warnings sent, repeat offenders, unique chats, paused chats, uptime, start time, storage backend, and command usage breakdown. Includes latest deletions preview.
+- **`/pause` & `/resume` Commands** — Group admins can temporarily pause or resume the bot's monitoring in their group.
+- **`/settings` Command** — Group admins can view their per-group configuration (whitelist, blacklist, custom keywords, pause status).
+- **`/whitelist` Command** — Group admins can add trusted domains that bypass link detection.
+- **`/blacklist` Command** — Group admins can add blocked domains for stricter enforcement.
+- **`/keywords` Command** — Group admins can add custom promotional keywords to detect.
+- **`/warn` Command** — Group admins can manually warn a user (reply to their message). Tracks violation count.
+- **`/mute` Command** — Group admins can mute a spammer for 1 hour.
+- **`/broadcast` Command** — Owner-only: send a message to every unique chat the bot has seen.
+- **`/log` Command** — Owner-only: view the last 20 deletion records with timestamps in IST.
+- **`/chats` Command** — Owner-only: list all active chats with type emojis, IDs, and pause status.
+- **Escalating Warnings** — Tracks user violations per chat:
+  - 1-2 violations: message deleted with standard warning
+  - 3-4 violations: strong warning with repeat offender notice
+  - 5+ violations: automatic mute for 1 hour
+- **Domain Whitelist** — Trusted domains in whitelist bypass link detection. Supports subdomain matching.
+- **Custom Keywords** — Group admins can add their own promotional keywords.
+- **Log Channel** — Forward all deletion events to a private admin channel (`LOG_CHANNEL` env var).
+- **Report Button** — Deleted messages include a 🚨 Report button for members to flag content to admins.
+- **Callback Stats Button** — Added 📊 Stats button to the start menu.
+- **IST Timestamps** — All deletion logs and stats use Indian Standard Time (UTC+5:30).
+- **Beta Notice** — All messages include a beta version notice directing users to report bugs.
+- **`/set-webhooks` Endpoint** — Set webhooks for ALL bots in one POST request with `base_url`.
+
+### 🔧 Changes
+
+- `botManager.js` — Added multi-bot parsing via `BOT_TOKENS`, `logChannel` config, and `globalThis.crypto.randomUUID()` fallback for webhook secrets.
+- `store.js` — Added `paused` chats tracking, `commandUsage` tracking, `recentDeletions` log (last 50), `userViolations` per chat/user, `perChatConfig` (whitelist, blacklist, customKeywords). New methods: `isPaused`, `pauseChat`, `resumeChat`, `getPausedCount`, `trackCommand`, `getCommandUsage`, `addDeletion`, `getRecentDeletions`, `getUserViolations`, `incrementUserViolation`, `resetUserViolations`, `getPerChatConfig`, `setPerChatConfig`, `trackWarning`, `trackRepeatOffender`.
+- `constants.js` — Added 12+ new message constants: `pausedMessage`, `resumedMessage`, `notPausedMessage`, `broadcastStarted`, `broadcastDone`, `logEmptyMessage`, `mutedMessage`, `warnedMessage`, `repeatOffenderMessage`, `whitelistUpdatedMessage`, `blacklistUpdatedMessage`, `keywordsUpdatedMessage`, `betaNotice`. Updated `helpMessage` with all new commands and beta notice. Updated `botAddedMessage` with beta warning.
+- `helper.js` — `containsLinks()` now accepts an optional `whitelist` array parameter. Whitelisted domains are ignored during link detection.
+- `botHandler.js` — Complete rewrite with all new commands, callback handlers, escalation system, report flow, log channel integration, per-group config loading, rate limiting, and beta notices.
+- `index.js` — Added multi-bot webhook routing (`POST /bot/:botId`), `/set-webhooks` endpoint, health check with bot details.
+- `worker.js` — Added multi-bot webhook routing (`POST /bot/<botId>`), health endpoint with bot count.
+- Updated to ESM modules throughout, added `globalThis.crypto` fallback for Cloudflare Workers.
+
+### 📦 New Dependencies
+
+- `@upstash/redis` (optional) — Free persistent storage for serverless deployments.
+
+### 📖 Documentation
+
+- `README.md` — Updated with all new commands, beta notice, multi-bot config.
+- `CHANGELOG.md` — This file.
+
+---
+
 ## [v1.0.0] — 2026-06-03
 
 ### ✨ Initial Release
@@ -33,7 +88,7 @@ All notable changes to Anti-Promotion Bot are documented here.
   - Express server for Docker/Vercel/Local (`api/index.js`)
   - Landing page at root URL
 
-- **Modular Architecture** (following Alisa Reaction Bot code style)
+- **Modular Architecture**
   - `api/antiAPI.js` — Telegram Bot API wrapper
   - `api/botHandler.js` — Core anti-promotion logic
   - `api/botManager.js` — Bot configuration manager

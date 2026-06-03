@@ -15,9 +15,18 @@
  * ======= • ======= • ======= • ======= • =======• =======
  */
 
-export function containsLinks(text) {
+export function containsLinks(text, whitelist = []) {
     const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|t\.me\/[^\s]+/gi;
-    return urlRegex.test(text);
+    const matches = text.match(urlRegex);
+    if (!matches) return false;
+    for (const url of matches) {
+        let domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+        domain = domain.replace(/^t\.me\//, '');
+        if (!whitelist.some(w => domain === w.toLowerCase() || domain.endsWith('.' + w.toLowerCase()))) {
+            return true;
+        }
+    }
+    return false;
 }
 
 export function detectPromotion(text) {
