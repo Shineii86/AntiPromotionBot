@@ -32,6 +32,8 @@ export const helpMessage = `📚 <b>Cᴏᴍᴍᴀɴᴅs — Pᴀʏ Aᴛᴛᴇɴ�
 
 🔹 <code>/start</code> — Wʜᴇʀᴇ Yᴏᴜ Mᴇᴛ Mᴇ.
 🔹 <code>/help</code> — Tʜɪs Mᴇssᴀɢᴇ.
+🔹 <code>/about</code> — Lᴇᴀʀɴ Aʙᴏᴜᴛ Mᴇ.
+🔹 <code>/donate</code> — Sᴜᴘᴘᴏʀᴛ Mʏ Dᴇᴠᴇʟᴏᴘᴇʀ.
 🔹 <code>/status</code> — Cʜᴇᴄᴋ Mʏ Cᴏɴғɪɢᴜʀᴀᴛɪᴏɴ.
 🔹 <code>/stats</code> — Lɪᴠᴇ Sᴛᴀᴛɪsᴛɪᴄs.
 
@@ -134,5 +136,42 @@ export const betaNotice = `⚠️ <b>Bᴇᴛᴀ Vᴇʀsɪᴏɴ</b>
 Tʜɪs Bᴏᴛ Is Iɴ Bᴇᴛᴀ. Yᴏᴜ Mᴀʏ Fɪɴᴅ Bᴜɢs, Eʀʀᴏʀs, Oʀ Uɴᴇxᴘᴇᴄᴛᴇᴅ Bᴇʜᴀᴠɪᴏʀ. Pʟᴇᴀsᴇ Rᴇᴘᴏʀᴛ Tʜᴇᴍ Tᴏ @Shineii86 Sᴏ Tʜᴇʏ Cᴀɴ Bᴇ Fɪxᴇᴅ.
 
 Sᴜɢɢᴇsᴛɪᴏɴs Aɴᴅ Fᴇᴇᴅʙᴀᴄᴋ Aʀᴇ Aʟᴡᴀʏs Wᴇʟᴄᴏᴍᴇ.`
+
+export const aboutMessage = `🛡️ <b>Aʙᴏᴜᴛ Aɴᴛɪ-Pʀᴏᴍᴏᴛɪᴏɴ Bᴏᴛ</b>
+
+Cʀᴀғᴛᴇᴅ Bʏ <b><a href='https://t.me/Shineii86'>Sʜɪɴᴇɪ Nᴏᴜᴢᴇɴ</a></b> Usɪɴɢ <b>Nᴏᴅᴇ.js</b> & <b>Express</b> — Dᴇᴘʟᴏʏᴇᴅ Oɴ <b>Cʟᴏᴜᴅғʟᴀʀᴇ Wᴏʀᴋᴇʀs</b>, <b>Vᴇʀᴄᴇʟ</b> & <b>Dᴏᴄᴋᴇʀ</b>.
+
+Tʜᴇ Gᴜᴀʀᴅɪᴀɴ Oғ Yᴏᴜʀ Cʜᴀᴛs — Aʟᴡᴀʏs Wᴀᴛᴄʜɪɴɢ, Aʟᴡᴀʏs Rᴇᴍᴏᴠɪɴɢ. Nᴏ Sᴘᴀᴍ Gᴇᴛs Pᴀsᴛ Mᴇ.
+
+<b>» 🚀 Vᴇʀsɪᴏɴ:</b> v${VERSION}
+<b>» 📡 Nᴇᴛᴡᴏʀᴋ:</b> <a href='https://t.me/QuinxNetwork'>Quinx Nᴇᴛᴡᴏʀᴋ</a>
+<b>» 🔔 Mᴀɪɴ Cʜᴀɴɴᴇʟ:</b> <a href='https://t.me/MaximXBots'>Mᴀxɪᴍ X Bᴏᴛs</a>
+<b>» 💬 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ:</b> <a href='https://t.me/MaximXGroup'>Mᴀxɪᴍ X Gʀᴏᴜᴘ</a>
+
+<b>🛡️ Fᴇᴀᴛᴜʀᴇs:</b>
+• Lɪɴᴋ Dᴇᴛᴇᴄᴛɪᴏɴ — Aᴜᴛᴏ-ʀᴇᴍᴏᴠᴇs ᴘʀᴏᴍᴏᴛɪᴏɴᴀʟ ʟɪɴᴋs
+• Sᴘᴀᴍ Fɪʟᴛᴇʀ — 30+ ᴘʀᴏᴍᴏᴛɪᴏɴᴀʟ ᴋᴇʏᴡᴏʀᴅs
+• Wʜɪᴛᴇʟɪsᴛ/Bʟᴀᴄᴋʟɪsᴛ — Pᴇʀ-ɢʀᴏᴜᴘ ᴅᴏᴍᴀɪɴ ᴄᴏɴᴛʀᴏʟ
+• Esᴄᴀʟᴀᴛɪɴɢ Wᴀʀɴɪɴɢs — 3 sᴛʀɪᴋᴇs → ᴡᴀʀɴ, 5 → ᴍᴜᴛᴇ
+• Lᴏɢ Cʜᴀɴɴᴇʟ — Fᴏʀᴡᴀʀᴅs ᴅᴇʟᴇᴛɪᴏɴs ᴛᴏ ᴀᴅᴍɪɴ ᴄʜᴀɴɴᴇʟ
+• Sᴛᴀᴛs & Lᴏɢs — Fᴜʟʟ ᴍᴏɴɪᴛᴏʀɪɴɢ ᴅᴀsʜʙᴏᴀʀᴅ
+
+<b>Bᴏᴛ Cʀᴇᴅɪᴛs:</b>
+<b>» 💀 Dᴇᴠᴇʟᴏᴘᴇʀ:</b> <a href='https://t.me/Shineii86'>Sʜɪɴᴇɪ Nᴏᴜᴢᴇɴ</a>`
+
+export const donateMessage = `🎁 <b>Sᴜᴘᴘᴏʀᴛ Tʜᴇ Pʀᴏᴊᴇᴄᴛ</b>
+
+Lᴏᴏᴋ… Iғ Yᴏᴜ Aᴘᴘʀᴇᴄɪᴀᴛᴇ Mʏ Sᴇʀᴠɪᴄᴇs, A Sᴍᴀʟʟ Cᴏɴᴛʀɪʙᴜᴛɪᴏɴ Kᴇᴇᴘs Mᴇ Rᴜɴɴɪɴɢ. Nᴏᴛ Tʜᴀᴛ I Nᴇᴇᴅ Iᴛ, Bᴜᴛ…
+
+<b>How To Donate:</b>
+
+📱 <b>Tᴏɴ Pᴀʏᴍᴇɴᴛ Vɪᴀ Tᴏɴᴋᴇᴇᴘᴇʀ</b>
+<code>UQBmK_-2A-gHnhx0hmWdFeQc8X7iZ0O_UkxQbQGU2uA6OwmX</code>
+<i>(Aᴄᴄᴇᴘᴛs Bᴏᴛʜ Tᴏɴ Aɴᴅ Usᴅᴛ)</i>
+
+💜 <b>Tᴇʟᴇɢʀᴀᴍ Sᴛᴀʀs</b>
+Sᴇɴᴅ Dɪʀᴇᴄᴛʟʏ Tᴏ <a href="https://t.me/Shineii86">Sʜɪɴᴇɪ Nᴏᴜᴢᴇɴ</a>
+
+Eᴠᴇɴ A Sᴍᴀʟʟ Gᴇsᴛᴜʀᴇ Mᴇᴀɴs Mᴏʀᴇ Tʜᴀɴ Yᴏᴜ Tʜɪɴᴋ. Спасибо. 🙏`
 
 export const versionInfo = `🚀 <b>Vᴇʀsɪᴏɴ:</b> v${VERSION}`

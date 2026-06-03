@@ -15,7 +15,7 @@
  */
 
 import {
-    startMessage, helpMessage, notAdminMessage,
+    startMessage, helpMessage, aboutMessage, donateMessage, notAdminMessage,
     linkDeletedMessage, promotionDeletedMessage, botAddedMessage,
     onlyOwnerMessage, onlyAdminMessage, groupOnlyMessage,
     statusOkMessage, statusNotAdminMessage, statusPrivateMessage,
@@ -113,15 +113,15 @@ function trackBotMessage(chatId, sent) {
 function getStartKeyboard(botUsername) {
     return [
         [{ text: '✚ Aᴅᴅ Tᴏ Gʀᴏᴜᴘ', url: `https://t.me/${botUsername}?startgroup=true` }],
-        [{ text: '📚 Hᴇʟᴘ', callback_data: 'cb_help' }],
-        [{ text: '📊 Sᴛᴀᴛs', callback_data: 'cb_stats' }],
+        [{ text: '📚 Hᴇʟᴘ', callback_data: 'cb_help' }, { text: '📊 Sᴛᴀᴛs', callback_data: 'cb_stats' }],
+        [{ text: '🛡️ Aʙᴏᴜᴛ', callback_data: 'cb_about' }, { text: '🎁 Dᴏɴᴀᴛᴇ', callback_data: 'cb_donate' }],
         [{ text: '💥 Cʟᴏsᴇ ✕', callback_data: 'cb_close' }],
     ];
 }
 
 function getBackKeyboard() {
     return [
-        [{ text: '◁ Bᴀᴄᴋ', callback_data: 'cb_menu' }, { text: 'Cʟᴏsᴇ ✕', callback_data: 'cb_close' }],
+        [{ text: '◁ Bᴀᴄᴋ', callback_data: 'cb_menu' }, { text: '🎁 Dᴏɴᴀᴛᴇ', callback_data: 'cb_donate' }, { text: 'Cʟᴏsᴇ ✕', callback_data: 'cb_close' }],
     ];
 }
 
@@ -191,6 +191,12 @@ export async function onUpdate(data, botApi, RestrictedChats, botUsername, owner
                     break;
                 case 'cb_stats':
                     await editMsg(getStatsMessage(botUsername, logChannel), getBackKeyboard());
+                    break;
+                case 'cb_about':
+                    await editMsg(withAd(aboutMessage), getBackKeyboard());
+                    break;
+                case 'cb_donate':
+                    await editMsg(withAd(donateMessage), getBackKeyboard());
                     break;
                 case 'cb_close':
                     await botApi.deleteMessage(chatId, messageId);
@@ -386,6 +392,18 @@ async function handleCommand(text, chatId, msg, botApi, botUsername, ownerId, li
                 const statusSent = await botApi.sendMessage(chatId, withAd(statusPrivateMessage), getCloseKeyboard(), linkPreview);
                 trackBotMessage(chatId, statusSent);
             }
+            break;
+
+        case '/about':
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            const aboutSent = await botApi.sendMessage(chatId, withAd(aboutMessage), getBackKeyboard(), linkPreview);
+            trackBotMessage(chatId, aboutSent);
+            break;
+
+        case '/donate':
+            await cleanupMessages(botApi, chatId, msg.message_id);
+            const donateSent = await botApi.sendMessage(chatId, withAd(donateMessage), getBackKeyboard(), linkPreview);
+            trackBotMessage(chatId, donateSent);
             break;
 
         case '/stats':
